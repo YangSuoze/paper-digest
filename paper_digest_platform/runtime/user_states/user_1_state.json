@@ -1,0 +1,120 @@
+{
+  "seen": {
+    "arxiv:2602.04725v1": "2026-03-14",
+    "arxiv:2512.01653v1": "2026-03-14",
+    "arxiv:2601.00081v1": "2026-03-14",
+    "arxiv:2512.10745v1": "2026-03-14",
+    "arxiv:2602.03858v1": "2026-03-14",
+    "arxiv:2511.21500v1": "2026-03-14"
+  },
+  "last_run": "2026-03-14T17:09:40",
+  "push_history": [
+    {
+      "uid": "arxiv:2512.10745v1",
+      "push_date": "2026-03-14",
+      "title": "PMB-NN: Physiology-Centred Hybrid AI for Personalized Hemodynamic Monitoring from Photoplethysmography",
+      "url": "http://arxiv.org/abs/2512.10745v1",
+      "venue": "arXiv (physics.med-ph)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2025-12-11",
+      "keywords": [
+        "ppg glucose estimation machine learning"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "arxiv:2602.03858v1",
+      "push_date": "2026-03-14",
+      "title": "PENGUIN: General Vital Sign Reconstruction from PPG with Flow Matching State Space Model",
+      "url": "http://arxiv.org/abs/2602.03858v1",
+      "venue": "arXiv (eess.SP)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2026-01-23",
+      "keywords": [
+        "ppg glucose estimation machine learning"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "arxiv:2511.21500v1",
+      "push_date": "2026-03-14",
+      "title": "Lost in Time? A Meta-Learning Framework for Time-Shift-Tolerant Physiological Signal Transformation",
+      "url": "http://arxiv.org/abs/2511.21500v1",
+      "venue": "arXiv (cs.LG)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2025-11-26",
+      "keywords": [
+        "ppg glucose estimation machine learning"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "arxiv:2601.00081v1",
+      "push_date": "2026-03-14",
+      "title": "Cuffless, calibration-free hemodynamic monitoring with physics-informed machine learning models",
+      "url": "http://arxiv.org/abs/2601.00081v1",
+      "venue": "arXiv (physics.med-ph)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2025-12-31",
+      "keywords": [
+        "cuffless blood pressure wearable sensor"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "arxiv:2512.01653v1",
+      "push_date": "2026-03-14",
+      "title": "Cuffless Blood Pressure Estimation from Six Wearable Sensor Modalities in Multi-Motion-State Scenarios",
+      "url": "http://arxiv.org/abs/2512.01653v1",
+      "venue": "arXiv (eess.SP)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2025-12-01",
+      "keywords": [
+        "cuffless blood pressure wearable sensor",
+        "ppg cuffless blood pressure estimation",
+        "pressure sensor blood pressure estimation wearable"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "arxiv:2602.04725v1",
+      "push_date": "2026-03-14",
+      "title": "Benchmarking and Enhancing PPG-Based Cuffless Blood Pressure Estimation Methods",
+      "url": "http://arxiv.org/abs/2602.04725v1",
+      "venue": "arXiv (cs.LG)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2026-02-04",
+      "keywords": [
+        "ppg cuffless blood pressure estimation"
+      ],
+      "keyword_categories": [
+        "血压监测"
+      ]
+    }
+  ],
+  "last_email_at": "2026-03-14T17:09:40",
+  "last_email_date": "2026-03-14"
+}

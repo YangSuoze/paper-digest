@@ -1,0 +1,112 @@
+{
+  "search": {
+    "days_back": 30,
+    "timeout_s": 30,
+    "max_total_papers": 20,
+    "max_results_per_keyword": 40,
+    "keywords": [
+      "cuffless wearable blood pressure monitoring",
+      "photoplethysmography blood pressure estimation",
+      "non-invasive glucose monitoring wearable sensor",
+      "PPG glucose estimation",
+      "continuous glucose monitoring wearable",
+      "flexible wearable biosensor blood glucose",
+      "stretchable electronics blood pressure sensor",
+      "epidermal flexible electronics glucose monitoring"
+    ],
+    "topic_filter": {
+      "enabled": true,
+      "target_terms": [
+        "blood pressure",
+        "cuffless",
+        "hypertension",
+        "glucose",
+        "glycemic",
+        "diabetes"
+      ],
+      "support_terms": [
+        "wearable",
+        "on-skin",
+        "epidermal",
+        "patch",
+        "wrist",
+        "flexible",
+        "stretchable",
+        "biosensor",
+        "sensor",
+        "non-invasive",
+        "noninvasive",
+        "photoplethysmography",
+        "ppg",
+        "continuous glucose monitoring",
+        "cgm"
+      ],
+      "exclude_terms": [
+        "blockchain",
+        "proof of stake",
+        "hydrogen storage",
+        "taxus",
+        "poliovirus",
+        "aggregate gradation",
+        "quantum",
+        "climate change"
+      ],
+      "min_target_hits": 1,
+      "min_support_hits": 1
+    },
+    "publisher_filters": [
+      "Elsevier",
+      "Springer nature",
+      "IEEE",
+      "ArXiv",
+      "Nature Portfolio",
+      "Wiley",
+      "Taylor & Francis",
+      "MDPI",
+      "ACS",
+      "RSC",
+      "IOP Publishing"
+    ],
+    "crossref_types": [
+      "journal-article",
+      "proceedings-article"
+    ],
+    "crossref_query_field": "bibliographic",
+    "crossref_min_title_token_matches": 2,
+    "crossref_min_title_token_fraction": 0.4
+  },
+  "sources": {
+    "arxiv": {
+      "enabled": true
+    },
+    "crossref": {
+      "enabled": true,
+      "mailto": ""
+    },
+    "semantic_scholar": {
+      "enabled": true,
+      "api_key_env": "SEMANTIC_SCHOLAR_API_KEY"
+    }
+  },
+  "llm": {
+    "deployment": "ali",
+    "model": "qwen-plus",
+    "temperature": 0.2,
+    "max_summaries": 10
+  },
+  "email": {
+    "smtp_host": "smtp.gmail.com",
+    "smtp_port": 587,
+    "use_tls": true,
+    "username": "qianding1998@gmail.com",
+    "password_env": "SMTP_PASSWORD",
+    "from": "qianding1998@gmail.com",
+    "to": [
+      "jason-qian.ding@connect.polyu.hk"
+    ]
+  },
+  "state": {
+    "path": "paper_digest_state.json",
+    "keep_days": 60
+  }
+}

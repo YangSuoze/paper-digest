@@ -1,0 +1,798 @@
+{
+  "seen": {
+    "doi:10.1002/advs.202520101": "2026-03-12",
+    "doi:10.3390/s26010345": "2026-03-12",
+    "doi:10.1016/j.bios.2026.118460": "2026-03-12",
+    "doi:10.3390/s26041118": "2026-03-12",
+    "doi:10.1109/jbhi.2026.3665810": "2026-03-13",
+    "doi:10.1007/s40820-025-02003-9": "2026-03-13",
+    "doi:10.3390/s26041269": "2026-03-13",
+    "arxiv:2602.04725v1": "2026-03-13",
+    "doi:10.1093/eurjpc/zwag058": "2026-03-13"
+  },
+  "last_run": "2026-03-13T11:50:26",
+  "last_email_at": "2026-03-13T11:50:26",
+  "last_email_date": "2026-03-13",
+  "dedupe_started_on": "2026-03-01",
+  "push_history": [
+    {
+      "uid": "doi:10.1093/eurjpc/zwag058",
+      "push_date": "2026-03-13",
+      "title": "Technical Aspects and Clinical Relevance of Cuffless Devices for Blood Pressure Measurement. A Scientific Statement of the ESC Working Group on e-Cardiology, the ESC Council on Hypertension, and the European Association of Preventive Cardiology of the ESC.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41739846/",
+      "venue": "European journal of preventive cardiology",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-02-25",
+      "keywords": [
+        "cuffless blood pressure wearable sensor"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "doi:10.3390/s26041269",
+      "push_date": "2026-03-13",
+      "title": "Peak-Independent Cuffless Blood Pressure Monitoring Using a Smart Sock: The Role of Temporal Lag Modeling in Foot-Based PPG.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41755207/",
+      "venue": "Sensors (Basel, Switzerland)",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-02-15",
+      "keywords": [
+        "cuffless blood pressure wearable sensor",
+        "ppg cuffless blood pressure estimation",
+        "pressure sensor blood pressure estimation wearable"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "doi:10.1109/jbhi.2026.3665810",
+      "push_date": "2026-03-13",
+      "title": "Few-Shot Personalized Blood Pressure Estimation from Photoplethysmography and Physiological Priors via Low-Rank Adaptation.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41701592/",
+      "venue": "IEEE journal of biomedical and health informatics",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-02-17",
+      "keywords": [
+        "ppg cuffless blood pressure estimation"
+      ],
+      "keyword_categories": [
+        "血压监测"
+      ]
+    },
+    {
+      "uid": "arxiv:2602.04725v1",
+      "push_date": "2026-03-13",
+      "title": "Benchmarking and Enhancing PPG-Based Cuffless Blood Pressure Estimation Methods",
+      "url": "http://arxiv.org/abs/2602.04725v1",
+      "venue": "arXiv (cs.LG)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2026-02-04",
+      "keywords": [
+        "ppg cuffless blood pressure estimation",
+        "ppg glucose estimation machine learning"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1007/s40820-025-02003-9",
+      "push_date": "2026-03-13",
+      "title": "Artificial Intelligence-Enhanced Wearable Blood Pressure Monitoring in Resource-Limited Settings: A Co-Design of Sensors, Model, and Deployment.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41486315/",
+      "venue": "Nano-micro letters",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-01-05",
+      "keywords": [
+        "cuffless blood pressure wearable sensor",
+        "pressure sensor blood pressure estimation wearable"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "doi:10.1016/j.bios.2026.118460",
+      "push_date": "2026-03-12",
+      "title": "reSPIRE: A wearable multimodal sensing system for monitoring ventilation, cardiovascular dynamics, and respiratory muscle activity.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41719927/",
+      "venue": "Biosensors & bioelectronics",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-02-10",
+      "keywords": [
+        "pressure sensor blood pressure estimation wearable"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "doi:10.3390/s26010345",
+      "push_date": "2026-03-12",
+      "title": "Non-Invasive Blood Pressure Estimation Enhanced by Capillary Refill Time Modulation of PPG Signals.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41516778/",
+      "venue": "Sensors (Basel, Switzerland)",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-01-05",
+      "keywords": [
+        "pressure sensor blood pressure estimation wearable"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "doi:10.1002/advs.202520101",
+      "push_date": "2026-03-12",
+      "title": "Intrinsic PPG-ECG Coupling for Accurate and Low-Power Blood Pressure Monitoring.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41773080/",
+      "venue": "Advanced science (Weinheim, Baden-Wurttemberg, Germany)",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-03-03",
+      "keywords": [
+        "pressure sensor blood pressure estimation wearable"
+      ],
+      "keyword_categories": [
+        "血压监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "doi:10.3390/s26041118",
+      "push_date": "2026-03-12",
+      "title": "Dynamic Sleep-Derived Heart Rate and Heart Rate Variability Features Associated with Glucose Metabolism Status: An Exploratory Feature-Selection Study Using Consumer Wearables.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41755060/",
+      "venue": "Sensors (Basel, Switzerland)",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-02-09",
+      "keywords": [
+        "noninvasive glucose estimation wearable sensor"
+      ],
+      "keyword_categories": [
+        "葡萄糖监测",
+        "可穿戴形态",
+        "传感机制"
+      ]
+    },
+    {
+      "uid": "doi:10.1002/anbr.202500302",
+      "push_date": "2026-03-09",
+      "title": "On the Molecular Diffusion Dynamics Between Subcutaneous Tissue and Microneedles for Wearable Continuous Glucose Monitoring",
+      "url": "https://doi.org/10.1002/anbr.202500302",
+      "venue": "Advanced NanoBiomed Research",
+      "publisher": "Wiley",
+      "source": "crossref",
+      "published_date": "2026-03-07",
+      "keywords": [
+        "electrochemical glucose wearable sensor",
+        "noninvasive glucose wearable biosensor",
+        "skin patch electrochemical glucose biosensor",
+        "sweat glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1002/adma.202515767",
+      "push_date": "2026-03-09",
+      "title": "Ion‑Mediated Structural Engineering of Hydrogel Interfaces for Tunable Mechanical and Analyte Diffusion Properties in Electrochemical Biosensors.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41787688/",
+      "venue": "Advanced materials (Deerfield Beach, Fla.)",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-03-05",
+      "keywords": [
+        "sweat glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1016/j.aca.2026.345105",
+      "push_date": "2026-03-06",
+      "title": "Flexible hydrophilic-hydrophobic array detection patch integrated with Au NPs/Cu-TCPP(Fe) biomimetic cascade catalysis reactions for enzyme-free sweat glucose monitoring.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41629053/",
+      "venue": "Analytica chimica acta",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-01-17",
+      "keywords": [
+        "noninvasive glucose wearable biosensor",
+        "sweat glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1038/s41598-025-33033-3",
+      "push_date": "2026-03-06",
+      "title": "A simulation-based plasmonic terahertz nanosensor with graphene-enhanced sensitivity for diabetes monitoring.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41422337/",
+      "venue": "Scientific reports",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2025-12-20",
+      "keywords": [
+        "noninvasive glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1002/smll.202511838",
+      "push_date": "2026-03-05",
+      "title": "Mesoporous Materials for Electrochemical Biosensors: From Broad Structure to Silica Film.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41557537/",
+      "venue": "Small (Weinheim an der Bergstrasse, Germany)",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-01-20",
+      "keywords": [
+        "noninvasive glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1088/2057-1976/ae44a1",
+      "push_date": "2026-03-05",
+      "title": "First-in-human evaluation of a microwave impedance-matching metasurface to improve transmission for non-invasive electromagnetic sensing of blood analytes.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41671589/",
+      "venue": "Biomedical physics & engineering express",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-02-23",
+      "keywords": [
+        "noninvasive glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.3390/s25247592",
+      "push_date": "2026-03-05",
+      "title": "Design and Optimization of an Inductive-Stub-Coupled CSRR for Non-Invasive Glucose Sensing.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41471587/",
+      "venue": "Sensors (Basel, Switzerland)",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2025-12-14",
+      "keywords": [
+        "noninvasive glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1021/acs.analchem.5c06883",
+      "push_date": "2026-03-05",
+      "title": "Copper-Based MOF Derivative with Enhanced Electrocatalytic Activity for Highly Sensitive and Ultrafast Detection of Salivary Glucose.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41779829/",
+      "venue": "Analytical chemistry",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-03-04",
+      "keywords": [
+        "noninvasive glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1117/12.3081006",
+      "push_date": "2026-03-05",
+      "title": "A wearable, fiberless, SCOS device for cuffless blood pressure monitoring",
+      "url": "https://doi.org/10.1117/12.3081006",
+      "venue": "Optical Diagnostics and Sensing XXVI: Toward Point-of-Care Diagnostics",
+      "publisher": "SPIE",
+      "source": "crossref",
+      "published_date": "2026-03-05",
+      "keywords": [
+        "cuffless blood pressure wearable sensor",
+        "electrochemical glucose wearable sensor",
+        "noninvasive glucose wearable biosensor",
+        "ppg cuffless blood pressure sensor",
+        "sweat glucose wearable biosensor",
+        "textile wearable blood pressure sensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测",
+        "血压监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1021/acs.analchem.5c05787",
+      "push_date": "2026-03-04",
+      "title": "Stretchable OFETs Biosensors Based on Chemically Cross-Linked Glucose Oxidase for Noninvasive Sweat Glucose Detection.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41685563/",
+      "venue": "Analytical chemistry",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-02-13",
+      "keywords": [
+        "noninvasive glucose wearable biosensor",
+        "sweat glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "doi:10.3390/s26041269",
+      "push_date": "2026-03-04",
+      "title": "Peak-Independent Cuffless Blood Pressure Monitoring Using a Smart Sock: The Role of Temporal Lag Modeling in Foot-Based PPG.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41755207/",
+      "venue": "Sensors (Basel, Switzerland)",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2026-02-15",
+      "keywords": [
+        "cuffless blood pressure wearable sensor",
+        "ppg cuffless blood pressure sensor",
+        "textile wearable blood pressure sensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "血压监测"
+      ]
+    },
+    {
+      "uid": "arxiv:2601.00081v1",
+      "push_date": "2026-03-04",
+      "title": "Cuffless, calibration-free hemodynamic monitoring with physics-informed machine learning models",
+      "url": "http://arxiv.org/abs/2601.00081v1",
+      "venue": "arXiv (physics.med-ph)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2025-12-31",
+      "keywords": [
+        "cuffless blood pressure wearable sensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "血压监测"
+      ]
+    },
+    {
+      "uid": "doi:10.1007/s00604-025-07757-y",
+      "push_date": "2026-03-04",
+      "title": "Colorimetric and electrochemical assessment of starch based highly sensitive Origami glucose biosensor over fabric: A potentially sensitive substitute of Chitosan.",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41389270/",
+      "venue": "Mikrochimica acta",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "2025-12-13",
+      "keywords": [
+        "electrochemical glucose wearable sensor",
+        "noninvasive glucose wearable biosensor",
+        "sweat glucose wearable biosensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "可穿戴形态",
+        "葡萄糖监测"
+      ]
+    },
+    {
+      "uid": "arxiv:2602.04725v1",
+      "push_date": "2026-03-04",
+      "title": "Benchmarking and Enhancing PPG-Based Cuffless Blood Pressure Estimation Methods",
+      "url": "http://arxiv.org/abs/2602.04725v1",
+      "venue": "arXiv (cs.LG)",
+      "publisher": "arXiv",
+      "source": "arxiv",
+      "published_date": "2026-02-04",
+      "keywords": [
+        "ppg cuffless blood pressure sensor"
+      ],
+      "keyword_categories": [
+        "传感机制",
+        "血压监测"
+      ]
+    },
+    {
+      "uid": "title:skinconformal pmnpt ultrasonic sensor for cuffless blood pressure sensing via",
+      "push_date": "2026-03-03",
+      "title": "Skin-conformal PMN-PT ultrasonic sensor for cuffless blood pressure sensing via",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "blood pressure",
+        "cuffless",
+        "sensor"
+      ],
+      "keyword_categories": [
+        "????"
+      ]
+    },
+    {
+      "uid": "title:maskfree laserdefined nonenzymatic glucose biosensors for highsensitivity and",
+      "push_date": "2026-03-03",
+      "title": "Mask-Free Laser-Defined Nonenzymatic Glucose Biosensors for High-Sensitivity and",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "biosensor",
+        "glucose",
+        "sensor"
+      ],
+      "keyword_categories": [
+        "????",
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:carbon nanotubeinduced enzyme polymerization for wearable multifunctional biose",
+      "push_date": "2026-03-03",
+      "title": "Carbon Nanotube-Induced Enzyme Polymerization for Wearable Multifunctional Biose",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "wearable"
+      ],
+      "keyword_categories": [
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:artificial intelligenceenhanced wearable blood pressure monitoring in resource",
+      "push_date": "2026-03-03",
+      "title": "Artificial Intelligence-Enhanced Wearable Blood Pressure Monitoring in Resource-",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "blood pressure",
+        "wearable"
+      ],
+      "keyword_categories": [
+        "????",
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:a dailydurable wearable sweat biosensing device with robust reticular conductiv",
+      "push_date": "2026-03-03",
+      "title": "A daily-durable wearable sweat biosensing device with robust reticular conductiv",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "device",
+        "wearable"
+      ],
+      "keyword_categories": [
+        "??/????",
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:technical aspects and clinical relevance of cuffless devices for blood pressure",
+      "push_date": "2026-03-02",
+      "title": "Technical Aspects and Clinical Relevance of Cuffless Devices for Blood Pressure",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "blood pressure",
+        "cuffless",
+        "device"
+      ],
+      "keyword_categories": [
+        "??/????",
+        "????"
+      ]
+    },
+    {
+      "uid": "title:portable and labelfree optical detection of sweat glucose using functionalized",
+      "push_date": "2026-03-02",
+      "title": "Portable and label-free optical detection of sweat glucose using functionalized",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "glucose",
+        "sweat glucose"
+      ],
+      "keyword_categories": [
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:construction of highly active interfaces on screenprinted carbon electrodes via",
+      "push_date": "2026-03-02",
+      "title": "Construction of Highly Active Interfaces on Screen-Printed Carbon Electrodes via",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "electrode"
+      ],
+      "keyword_categories": [
+        "??/????"
+      ]
+    },
+    {
+      "uid": "title:a dailydurable wearable sweat biosensing device with robust reticular conductiv",
+      "push_date": "2026-03-02",
+      "title": "A daily-durable wearable sweat biosensing device with robust reticular conductiv",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "device",
+        "wearable"
+      ],
+      "keyword_categories": [
+        "??/????",
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:3dprinted hollow microneedlebased electrochemical sensor for wireless glucose",
+      "push_date": "2026-03-02",
+      "title": "3D-printed hollow microneedle-based electrochemical sensor for wireless glucose",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "electrochemical",
+        "glucose",
+        "sensor"
+      ],
+      "keyword_categories": [
+        "????",
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:janus hydrogel combines antifreezing and adhesive properties for sweat glucose",
+      "push_date": "2026-03-01",
+      "title": "Janus hydrogel combines anti-freezing and adhesive properties for sweat glucose",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "glucose",
+        "sweat glucose"
+      ],
+      "keyword_categories": [
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:flexible thermal array sensor for imperceptible monitoring of multidimensional v",
+      "push_date": "2026-03-01",
+      "title": "Flexible thermal array sensor for imperceptible monitoring of multidimensional v",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "flexible",
+        "sensor"
+      ],
+      "keyword_categories": [
+        "??/????",
+        "????"
+      ]
+    },
+    {
+      "uid": "title:an allsoft wearable electrochemiluminescence chip for sweat metabolite detectio",
+      "push_date": "2026-03-01",
+      "title": "An All-Soft Wearable Electrochemiluminescence Chip for Sweat Metabolite Detectio",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "wearable"
+      ],
+      "keyword_categories": [
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:a dailydurable wearable sweat biosensing device with robust reticular conductiv",
+      "push_date": "2026-03-01",
+      "title": "A daily-durable wearable sweat biosensing device with robust reticular conductiv",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "device",
+        "wearable"
+      ],
+      "keyword_categories": [
+        "??/????",
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:a perspective on noninvasive blood pressure monitoring bridging emerging princ",
+      "push_date": "2026-03-01",
+      "title": "A Perspective on Non-Invasive Blood Pressure Monitoring: Bridging Emerging Princ",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "blood pressure"
+      ],
+      "keyword_categories": [
+        "????"
+      ]
+    },
+    {
+      "uid": "title:flexible thermal array sensor for imperceptible monitoring of multidimensional v",
+      "push_date": "2026-02-28",
+      "title": "Flexible thermal array sensor for imperceptible monitoring of multidimensional v",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "flexible",
+        "sensor"
+      ],
+      "keyword_categories": [
+        "??/????",
+        "????"
+      ]
+    },
+    {
+      "uid": "title:construction of highly active interfaces on screenprinted carbon electrodes via",
+      "push_date": "2026-02-28",
+      "title": "Construction of Highly Active Interfaces on Screen-Printed Carbon Electrodes via",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "electrode"
+      ],
+      "keyword_categories": [
+        "??/????"
+      ]
+    },
+    {
+      "uid": "title:an allsoft wearable electrochemiluminescence chip for sweat metabolite detectio",
+      "push_date": "2026-02-28",
+      "title": "An All-Soft Wearable Electrochemiluminescence Chip for Sweat Metabolite Detectio",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "wearable"
+      ],
+      "keyword_categories": [
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:a dailydurable wearable sweat biosensing device with robust reticular conductiv",
+      "push_date": "2026-02-28",
+      "title": "A daily-durable wearable sweat biosensing device with robust reticular conductiv",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "device",
+        "wearable"
+      ],
+      "keyword_categories": [
+        "??/????",
+        "?????"
+      ]
+    },
+    {
+      "uid": "title:a perspective on noninvasive blood pressure monitoring bridging emerging princ",
+      "push_date": "2026-02-28",
+      "title": "A Perspective on Non-Invasive Blood Pressure Monitoring: Bridging Emerging Princ",
+      "url": "",
+      "venue": "",
+      "publisher": "",
+      "source": "pubmed",
+      "published_date": "",
+      "keywords": [
+        "blood pressure"
+      ],
+      "keyword_categories": [
+        "????"
+      ]
+    }
+  ],
+  "last_weekly_summary_at": "2026-03-08T12:04:51",
+  "last_weekly_summary_date": "2026-03-08",
+  "last_weekly_summary_week": "2026-W10"
+}

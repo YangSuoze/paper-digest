@@ -1,0 +1,303 @@
+﻿{
+  "search": {
+    "days_back": 90,
+    "timeout_s": 30,
+    "max_total_papers": 10,
+    "max_results_per_keyword": 40,
+    "keywords": [
+      "cuffless blood pressure wearable sensor",
+      "ppg cuffless blood pressure estimation",
+      "multimodal cuffless blood pressure estimation",
+      "ultrasound cuffless blood pressure monitoring",
+      "pressure sensor blood pressure estimation wearable",
+      "noninvasive glucose estimation wearable sensor",
+      "ppg glucose estimation machine learning",
+      "multimodal glucose estimation sensor fusion",
+      "ultrasound glucose estimation wearable",
+      "temperature pressure glucose estimation wearable"
+    ],
+    "topic_filter": {
+      "enabled": true,
+      "target_terms": [
+        "blood pressure",
+        "cuffless",
+        "hypertension",
+        "glucose",
+        "blood glucose",
+        "glycemic",
+        "noninvasive",
+        "photoplethysmography",
+        "ppg",
+        "ultrasound",
+        "pressure",
+        "temperature",
+        "estimation",
+        "prediction",
+        "machine learning",
+        "deep learning",
+        "artificial intelligence",
+        "sensor fusion",
+        "multimodal"
+      ],
+      "support_terms": [
+        "wearable",
+        "on-skin",
+        "patch",
+        "wrist",
+        "flexible",
+        "electronics",
+        "device",
+        "hardware",
+        "transducer",
+        "sensor",
+        "optical",
+        "signal",
+        "waveform",
+        "feature",
+        "fusion",
+        "multimodal",
+        "algorithm",
+        "model",
+        "machine learning",
+        "deep learning",
+        "artificial intelligence",
+        "ultrasound",
+        "pressure",
+        "temperature",
+        "non-invasive",
+        "noninvasive"
+      ],
+      "required_groups": [
+        {
+          "name": "form_factor",
+          "min_hits": 1,
+          "terms": [
+            "wearable",
+            "patch",
+            "wrist",
+            "on-skin",
+            "flexible",
+            "cuffless",
+            "ppg",
+            "photoplethysmography"
+          ]
+        },
+        {
+          "name": "sensing_hardware",
+          "min_hits": 1,
+          "terms": [
+            "sensor",
+            "transducer",
+            "electronics",
+            "hardware",
+            "device",
+            "optical",
+            "ultrasound",
+            "pressure",
+            "temperature",
+            "ppg",
+            "photoplethysmography"
+          ]
+        },
+        {
+          "name": "application",
+          "min_hits": 1,
+          "terms": [
+            "blood pressure",
+            "cuffless",
+            "glucose",
+            "blood glucose",
+            "glycemic",
+            "glycaemic",
+            "hemodynamic"
+          ]
+        },
+        {
+          "name": "measurement",
+          "min_hits": 1,
+          "terms": [
+            "monitoring",
+            "measurement",
+            "estimation",
+            "prediction",
+            "regression",
+            "modeling",
+            "sensing",
+            "quantification",
+            "machine learning",
+            "deep learning",
+            "algorithm"
+          ]
+        }
+      ],
+      "clinical_guard": {
+        "trigger_hits": 2,
+        "min_device_hits": 3,
+        "clinical_terms": [
+          "patient",
+          "patients",
+          "cohort",
+          "retrospective",
+          "randomized",
+          "trial",
+          "dialysis",
+          "hospital",
+          "clinic",
+          "case report",
+          "reimbursement",
+          "guideline",
+          "medication",
+          "treatment",
+          "therapy",
+          "intensive care",
+          "adoption",
+          "reimbursement",
+          "case report"
+        ],
+        "device_terms": [
+          "wearable",
+          "sensor",
+          "device",
+          "patch",
+          "wrist",
+          "on-skin",
+          "flexible",
+          "electronics",
+          "hardware",
+          "transducer",
+          "optical",
+          "ultrasound",
+          "pressure",
+          "temperature"
+        ]
+      },
+      "exclude_terms": [
+        "blockchain",
+        "proof of stake",
+        "hydrogen storage",
+        "taxus",
+        "poliovirus",
+        "aggregate gradation",
+        "quantum",
+        "climate change",
+        "authentication",
+        "risk score",
+        "medication adherence",
+        "meal",
+        "diet",
+        "nutrition",
+        "eating schedule",
+        "colorimetric",
+        "fluorescent",
+        "electrochemiluminescence",
+        "catalysis",
+        "mof",
+        "metal-organic framework",
+        "sweat glucose",
+        "salivary glucose",
+        "saliva glucose",
+        "tear glucose"
+      ],
+      "min_target_hits": 1,
+      "min_support_hits": 2
+    },
+    "publisher_filters": [],
+    "crossref_types": [
+      "journal-article",
+      "proceedings-article"
+    ],
+    "arxiv_query_mode": "tokens",
+    "arxiv_min_title_token_matches": 1,
+    "arxiv_min_title_token_fraction": 0.2,
+    "arxiv_min_similarity": 0.22,
+    "arxiv_backfill_enabled": false,
+    "arxiv_backfill_days": 120,
+    "arxiv_min_results_per_keyword": 1,
+    "crossref_query_field": "query",
+    "crossref_min_title_token_matches": 1,
+    "crossref_min_title_token_fraction": 0.2,
+    "crossref_min_similarity": 0.22,
+    "pubmed_min_similarity": 0.22,
+    "ieee_min_similarity": 0.22,
+    "global_min_relevance": 0.30,
+    "ranking": {
+      "relevance_weight": 0.7,
+      "impact_weight": 0.25,
+      "recency_weight": 0.05
+    }
+  },
+  "sources": {
+    "arxiv": {
+      "enabled": true
+    },
+    "crossref": {
+      "enabled": true,
+      "mailto": ""
+    },
+    "pubmed": {
+      "enabled": true,
+      "rows": 40,
+      "email": "",
+      "api_key_env": "NCBI_API_KEY"
+    },
+    "ieee": {
+      "enabled": true,
+      "rows": 40,
+      "api_key_env": "IEEE_XPLORE_API_KEY"
+    },
+    "semantic_scholar": {
+      "enabled": true,
+      "api_key_env": "SEMANTIC_SCHOLAR_API_KEY"
+    }
+  },
+  "llm": {
+    "deployment": "ali",
+    "model": "qwen-plus",
+    "temperature": 0.2,
+    "summary_style": "magazine",
+    "max_summaries": 10,
+    "preference_filter": {
+      "enabled": true,
+      "candidate_pool_size": 12,
+      "min_score": 60,
+      "require_keep": false,
+      "profile": "Prefer wearable hardware design and algorithm innovation for noninvasive blood pressure or glucose estimation. Focus on PPG, ultrasound, pressure, temperature, multimodal sensing, signal processing, machine learning, deep learning, personalization, and sensor fusion. Material or flexible-device elements such as hydrogel, flexible substrates, microneedles, or electrochemical interfaces are acceptable only when they clearly support device implementation, signal acquisition, estimation models, system validation, or continuous monitoring. Down-rank papers centered on material synthesis, chemistry mechanisms, catalysis, electrochemical mechanisms, nanomaterial characterization, or colorimetric/fluorescent assays when they are not mainly about a BP or glucose estimation system."
+    }
+  },
+  "email": {
+    "smtp_host": "smtp.office365.com",
+    "smtp_port": 587,
+    "use_tls": true,
+    "use_ssl": false,
+    "smtp_timeout_s": 60,
+    "max_retries": 3,
+    "retry_backoff_s": 8,
+    "username": "YOUR_EMAIL@domain.com",
+    "password_env": "SMTP_PASSWORD",
+    "from": "YOUR_EMAIL@domain.com",
+    "to": [
+      "YOUR_RECEIVER_EMAIL@domain.com"
+    ]
+  },
+  "schedule": {
+    "daily_weekdays": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "weekly_summary": {
+      "enabled": true,
+      "weekday": 7,
+      "lookback_days": 7,
+      "max_items": 120
+    }
+  },
+  "state": {
+    "path": "paper_digest_state.json",
+    "keep_days": 60,
+    "dedupe_start_date": "2026-03-01",
+    "history_keep_days": 180
+  }
+}
