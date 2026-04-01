@@ -16,6 +16,7 @@ from typing import Any
 from app.core.config import get_settings
 from app.services.email_service import EmailService
 from app.services.settings_service import SettingsService
+from app.paper_digest import legacy_agent
 
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,13 @@ class DigestDispatchService:
         keywords_list: list[list[str]] | None = None,
         progress_callback: Callable[[str, str], None] | None = None,
     ) -> str:
+        """
+        run_type: scheduled or manual_digest ，自动触发定时任务或手动触发
+        """
+        days_back = (
+            90 if run_type == "manual_digest" else 7
+        )  # 手动推送任务默认回溯90天，定时任务默认回溯7天
+        # 如果progress_callback为None则不会回显前端进度，自动触发定时任务时不需要回显前端，手动触发时需要回显
         self._emit_progress(progress_callback, "prepare", "读取推送配置中")
         logger.info(
             "digest trigger start user_id=%s run_type=%s force_send=%s keywords_list=%s",
@@ -55,7 +63,7 @@ class DigestDispatchService:
         )
         profile = await self._settings_service.get_user_dispatch_profile(user_id)
         require_active = run_type == "scheduled"
-        effective_keywords_list = self._effective_keywords_list(profile, keywords_list)
+        effective_keywords_list = self._effective_keywords_list(profile)
         logger.info(
             "digest trigger effective keywords user_id=%s groups=%s",
             user_id,
@@ -69,28 +77,27 @@ class DigestDispatchService:
             keywords_list=effective_keywords_list,
         )
 
-        runtime_config = await asyncio.to_thread(
-            self._build_runtime_config,
-            profile,
-            force_send,
-            effective_keywords_list,
-            run_type,
-        )
-
-        state_snapshot = await self._settings_service.get_user_digest_state(user_id)
+        state_snapshot = await self._settings_service.get_user_digest_state(
+            user_id
+        )  # dict[str, Any]
         history_before = await asyncio.to_thread(
             self._history_key_set_from_state, state_snapshot
-        )
+        )  # set[tuple[str, str]]
         history_row_count_before = await asyncio.to_thread(
             self._history_row_count_from_state, state_snapshot
-        )
+        )  # 统计历史推送文章数量
+
         try:
             async with self._semaphore:
                 await asyncio.to_thread(
                     self._run_agent_with_runtime_config,
-                    runtime_config,
-                    effective_keywords_list,
-                    state_snapshot,
+                    days_back=days_back,
+                    shared={
+                        **self._shared_smtp_cfg(),
+                        "to": profile.get("target_email"),
+                    },
+                    keywords_list=effective_keywords_list,
+                    state_snapshot=state_snapshot,  # 默认为{}
                     user_search_intent=profile.get("user_search_intent", ""),
                     dispatch_run_type=run_type,
                     progress_callback=progress_callback,
@@ -106,6 +113,7 @@ class DigestDispatchService:
             )
             raise RuntimeError(message) from exc
 
+        # 推送成功后更新用户推送状态
         await self._settings_service.save_user_digest_state(user_id, state_snapshot)
         new_records = await asyncio.to_thread(
             self._collect_new_history_records_from_state,
@@ -119,9 +127,7 @@ class DigestDispatchService:
         inserted_count = await self._settings_service.add_paper_records(
             user_id, run_type, new_records
         )
-        message = (
-            f"推送成功；本次推送 {pushed_count} 篇，新增论文 {len(new_records)} 篇，入库 {inserted_count} 条"
-        )
+        message = f"推送成功；本次推送 {pushed_count} 篇，新增论文 {len(new_records)} 篇，入库 {inserted_count} 条"
         logger.info(
             "digest trigger success user_id=%s run_type=%s pushed=%s new_records=%s inserted=%s",
             user_id,
@@ -136,14 +142,11 @@ class DigestDispatchService:
         self._emit_progress(progress_callback, "completed", message)
         return message
 
-    async def submit_manual_digest_task(
-        self,
-        user_id: int,
-        *,
-        keywords_list: list[list[str]] | None = None,
-    ) -> dict[str, Any]:
+    async def submit_manual_digest_task(self, user_id: int) -> dict[str, Any]:
         profile = await self._settings_service.get_user_dispatch_profile(user_id)
-        effective_keywords_list = self._effective_keywords_list(profile, keywords_list)
+        effective_keywords_list = self._effective_keywords_list(
+            profile
+        )  # 获取用户配置的关键词列表
         self._validate_profile(
             profile,
             for_digest=True,
@@ -207,6 +210,7 @@ class DigestDispatchService:
         user_id: int,
         keywords_list: list[list[str]],
     ) -> None:
+        """手动触发论文推送任务"""
         started_at = self._now_iso()
         self._update_task(
             task_id,
@@ -252,7 +256,9 @@ class DigestDispatchService:
             result_message=message,
             finished_at=self._now_iso(),
         )
-        logger.info("manual digest task success user_id=%s task_id=%s", user_id, task_id)
+        logger.info(
+            "manual digest task success user_id=%s task_id=%s", user_id, task_id
+        )
 
     async def send_test_email(
         self, user_id: int, *, to_email: str | None = None
@@ -308,6 +314,10 @@ class DigestDispatchService:
         require_active: bool = True,
         keywords_list: list[list[str]] | None = None,
     ) -> None:
+        """验证用户配置的推送参数
+        for_digest: 是否为论文推送任务，如果为 True， 则需要配置关键词keywords_list
+        require_active: 是否需要账户已激活
+        """
         if require_active and not bool(profile.get("active", 1)):
             raise ValueError("当前账户推送已停用")
         if not str(profile.get("target_email") or "").strip():
@@ -377,57 +387,13 @@ class DigestDispatchService:
     def _effective_keywords_list(
         self,
         profile: dict[str, Any],
-        keywords_override: list[list[str]] | None,
     ) -> list[list[str]]:
-        if keywords_override is not None:
-            cleaned = self._normalize_keywords_list(keywords_override)
-            if cleaned:
-                return cleaned
-
         profile_keywords_list = self._normalize_keywords_list(
             profile.get("keywords_list")
         )
         if profile_keywords_list:
             return profile_keywords_list
-
-        legacy_keywords = self._normalize_keywords_list(profile.get("keywords") or [])
-        if legacy_keywords:
-            return legacy_keywords
-
-        # 保留兼容：若 profile 里有 keywords_json（字符串），尝试兜底解析
-        try:
-            raw_json = profile.get("keywords_json")
-            parsed = json.loads(raw_json) if isinstance(raw_json, str) else []
-            parsed_keywords = self._normalize_keywords_list(parsed)
-            if parsed_keywords:
-                return parsed_keywords
-        except Exception:
-            pass
-
-        # 返回空列表，让上层统一抛出“请先配置关键词”
-        if not keywords_override:
-            logger.warning(
-                "empty keywords_list for user_id=%s profile_keys=%s",
-                profile.get("user_id"),
-                sorted(list(profile.keys())),
-            )
-        return []
-
-    def _effective_keywords(
-        self,
-        profile: dict[str, Any],
-        keywords_override: list[str] | None,
-    ) -> list[str]:
-        """保留旧接口：把一维关键词转换后返回扁平结果。"""
-        source = (
-            keywords_override
-            if keywords_override is not None
-            else (profile.get("keywords") or [])
-        )
-        cleaned = self._normalize_keyword_group([str(item) for item in source])
-        if not cleaned:
-            raise ValueError("请先配置关键词")
-        return cleaned
+        raise ValueError("请先配置关键词")
 
     def _shared_smtp_cfg(self) -> dict[str, object]:
         return {
@@ -444,135 +410,27 @@ class DigestDispatchService:
             "timeout_s": int(self._settings.verify_smtp_timeout_seconds or 30),
         }
 
-    def _build_runtime_config(
-        self,
-        profile: dict[str, Any],
-        force_send: bool,
-        keywords_list: list[list[str]],
-        run_type: str,
-    ) -> dict[str, Any]:
-        shared = self._shared_smtp_cfg()
-        normalized_run_type = str(run_type or "").strip().lower()
-        days_back = 90 if normalized_run_type == "manual_digest" else 7
-        logger.info(
-            "build runtime config user_id=%s run_type=%s days_back=%s",
-            profile.get("user_id"),
-            normalized_run_type,
-            days_back,
-        )
-
-        cfg: dict[str, Any] = {
-            "search": {
-                "days_back": days_back,
-                "timeout_s": 30,
-                "max_total_papers": 10,
-                "max_results_per_keyword": 30,
-                "keywords_list": keywords_list,
-                "global_min_relevance": 0.2,
-            },
-            "sources": {
-                "arxiv": {"enabled": True},
-                "crossref": {"enabled": True, "mailto": ""},
-                "pubmed": {
-                    "enabled": True,
-                    "rows": 30,
-                    "email": "",
-                    "api_key_env": "NCBI_API_KEY",
-                },
-                "ieee": {
-                    "enabled": True,
-                    "rows": 30,
-                    "api_key_env": "IEEE_XPLORE_API_KEY",
-                },
-                "semantic_scholar": {
-                    "enabled": True,
-                    "api_key_env": "SEMANTIC_SCHOLAR_API_KEY",
-                },
-            },
-            "llm": {
-                "deployment": "ali",
-                "model": "qwen-plus",
-                "temperature": 0.2,
-                "summary_style": "magazine",
-                "max_summaries": 0,
-            },
-            "email": {
-                "smtp_host": str(shared.get("smtp_host") or "").strip(),
-                "smtp_port": int(shared.get("smtp_port") or 587),
-                "use_tls": bool(shared.get("use_tls", True)),
-                "use_ssl": bool(shared.get("use_ssl", False)),
-                "username": str(shared.get("username") or "").strip(),
-                "password": str(shared.get("password") or ""),
-                "from": str(shared.get("from") or "").strip(),
-                "to": [str(profile.get("target_email") or "").strip()],
-            },
-            "schedule": {
-                "daily_weekdays": [1, 2, 3, 4, 5],
-                "weekly_summary": {
-                    "enabled": False,
-                    "weekday": 7,
-                    "lookback_days": 7,
-                    "max_items": 120,
-                },
-            },
-            "state": {
-                "keep_days": 60,
-                "history_keep_days": 180,
-                "single_push_per_day": True,
-            },
-        }
-
-        if force_send:
-            cfg["schedule"]["daily_weekdays"] = [1, 2, 3, 4, 5, 6, 7]
-            cfg["state"]["single_push_per_day"] = False
-
-        return copy.deepcopy(cfg)
-
     def _run_agent_with_runtime_config(
         self,
-        runtime_config: dict[str, Any],
+        days_back: int,
+        shared: dict[str, Any],
         keywords_list: list[list[str]],
         state_snapshot: dict[str, Any],
         user_search_intent: str,
         dispatch_run_type: str,
         progress_callback: Callable[[str, str], None] | None = None,
     ) -> None:
-        try:
-            from app.paper_digest.runner import run_once
-        except ModuleNotFoundError as exc:
-            raise RuntimeError(
-                "缺少运行依赖，请在 backend 目录执行 `pip install -r requirements.txt`"
-            ) from exc
-
-        tmp_config_path: Path | None = None
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            suffix=".json",
-            prefix="paper_digest_runtime_",
-            encoding="utf-8",
-            delete=False,
-        ) as tmp:
-            json.dump(runtime_config, tmp, ensure_ascii=False, indent=2)
-            tmp_config_path = Path(tmp.name)
-
-        try:
-            run_once(
-                str(tmp_config_path),
-                dry_run=False,
-                no_email=False,
-                skip_llm=False,
-                skip_semantic_scholar=False,
-                run_mode="daily",
-                keywords_list=keywords_list,
-                state_override=state_snapshot,
-                persist_state_to_file=False,
-                user_search_intent=user_search_intent,
-                dispatch_run_type=dispatch_run_type,
-                progress_callback=progress_callback,
-            )
-        finally:
-            if tmp_config_path and tmp_config_path.exists():
-                tmp_config_path.unlink(missing_ok=True)
+        legacy_agent.run_once(
+            skip_llm=False,
+            run_mode="daily",
+            days_back=days_back,
+            shared=shared,
+            keywords_list=keywords_list,
+            state_override=state_snapshot,
+            profile=user_search_intent,
+            dispatch_run_type=dispatch_run_type,
+            progress_callback=progress_callback,
+        )
 
     def _emit_progress(
         self,
@@ -675,6 +533,7 @@ class DigestDispatchService:
         return fresh
 
     def _load_state_history_rows(self, state: dict[str, Any]) -> list[dict[str, Any]]:
+        """从状态中提取推送历史记录"""
         history = (state or {}).get("push_history") or []
         if not isinstance(history, list):
             return []

@@ -1939,8 +1939,10 @@ def _log(msg: str) -> None:
         print(msg, flush=True)
     except UnicodeEncodeError:
         encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
-        safe = str(msg).encode(encoding, errors="replace").decode(
-            encoding, errors="replace"
+        safe = (
+            str(msg)
+            .encode(encoding, errors="replace")
+            .decode(encoding, errors="replace")
         )
         print(safe, flush=True)
 
@@ -2272,21 +2274,7 @@ def _prune_push_history(
 
 
 def _paper_uid(p: Paper) -> str:
-    """
-    功能说明：
-        执行 `_paper_uid` 对应的辅助业务逻辑，为论文检索与推送流程提供支撑。
-    参数说明：
-        - p: 业务输入参数。
-    返回值：
-        返回类型为 `str`。
-    异常：
-        - 按实现可能抛出运行时异常；调用方应根据业务场景处理。
-    """
-    if p.doi:
-        return f"doi:{p.doi.lower()}"
-    if p.arxiv_id:
-        return f"arxiv:{p.arxiv_id.lower()}"
-    return f"title:{_normalize_title(p.title)}"
+    return p.url
 
 
 # 导出当前模块全部符号（包含下划线前缀符号，供分层模块通过 * 复用）。

@@ -200,9 +200,8 @@ def _paper_history_record(
     异常：
         - 按实现可能抛出运行时异常；调用方应根据业务场景处理。
     """
-    keywords = _normalize_keywords(p.keywords)
     return {
-        "uid": _paper_uid(p),
+        "uid": p.url.strip(),
         "push_date": push_date.isoformat(),
         "run_type": str(run_type or "").strip(),
         "title": p.title.strip(),
@@ -211,8 +210,8 @@ def _paper_history_record(
         "publisher": (p.publisher or "").strip(),
         "source": (p.source or "").strip(),
         "published_date": p.published_date.isoformat() if p.published_date else "",
-        "keywords": keywords,
-        "keyword_categories": _keyword_categories(keywords),
+        "keywords": p.keywords,
+        "keyword_categories": _keyword_categories(p.keywords),
     }
 
 

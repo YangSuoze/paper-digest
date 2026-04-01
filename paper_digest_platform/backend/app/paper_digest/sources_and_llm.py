@@ -126,7 +126,7 @@ def search_arxiv(
                 doi="",
                 arxiv_id=arxiv_id,
                 pdf_url=pdf_url,
-                keywords=["".join(keywords)],
+                keywords=[" + ".join(keywords)],
             )
             ranked[paper.url] = (0.0, paper)
     papers = [p for _, p in ranked.values()]
@@ -959,7 +959,6 @@ def llm_preference_rerank(
 
 def llm_summarize_zh(
     paper: Paper,
-    llm_config: dict[str, Any],
     user_search_intent: str = "",
 ) -> dict[str, str]:
     """
@@ -978,10 +977,10 @@ def llm_summarize_zh(
     if LLMClient is None:
         return {}
 
-    model = (llm_config.get("model") or "qwen-plus").strip()
-    deployment = (llm_config.get("deployment") or "ali").strip()
-    temperature = float(llm_config.get("temperature") or 0.2)
-    summary_style = str(llm_config.get("summary_style") or "magazine").strip().lower()
+    model = "qwen-plus"
+    deployment = "ali"
+    temperature = 0.2
+    summary_style = "magazine"
     if summary_style == "classic":
         system_message = (
             "你是论文解读助手。请严格输出 JSON 对象，键必须是：背景、动机、方法、结果。"
@@ -1199,6 +1198,7 @@ if __name__ == "__main__":
         since=dt.date(2025, 1, 1),
         rows=50,
     )
+
     print(f"Found {len(res)} papers.")
     for item in res:
         print(item.title)

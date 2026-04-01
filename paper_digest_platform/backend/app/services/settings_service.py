@@ -149,6 +149,7 @@ class SettingsService:
         return self._row_to_schema(row)
 
     async def get_user_settings_row(self, user_id: int) -> dict[str, Any]:
+        # settings 缺失时自动补建，防止历史脏数据导致页面报错
         user_email = ""
         async with get_conn() as conn:
             cursor = await conn.execute(
@@ -192,38 +193,31 @@ class SettingsService:
 
         now = _now_iso()
         async with get_conn() as conn:
-            # 1. 先检查用户设置是否存在
+            # 1. 先检查用户设置是否存在，新建用户时无配置
             cursor = await conn.execute(
-                "SELECT COUNT(*) FROM user_settings WHERE user_id = ?", (user_id,)
+                """
+                UPDATE user_settings
+                SET target_email=?, daily_send_time=?, timezone=?, 
+                    keywords_json=?, active=?, updated_at=?, user_search_intent=?
+                WHERE user_id=?
+                """,
+                (
+                    payload.target_email,
+                    payload.daily_send_time,
+                    payload.timezone.strip() or self._settings.default_timezone,
+                    json.dumps(keywords_list, ensure_ascii=False),
+                    1 if payload.active else 0,
+                    now,
+                    user_search_intent,
+                    user_id,
+                ),
             )
-            count = await cursor.fetchone()
-            exists = count[0] > 0
-            if exists:
-                # 2. 如果存在，执行更新
-                cursor = await conn.execute(
-                    """
-                    UPDATE user_settings
-                    SET target_email=?, daily_send_time=?, timezone=?, keywords_json=?, active=?, updated_at=?, user_search_intent=?
-                    WHERE user_id=?
-                    """,
-                    (
-                        payload.target_email,
-                        payload.daily_send_time,
-                        payload.timezone.strip() or self._settings.default_timezone,
-                        json.dumps(keywords_list, ensure_ascii=False),
-                        1 if payload.active else 0,
-                        now,
-                        user_search_intent,
-                        user_id,
-                    ),
-                )
-                logger.info(f"成功更新 {cursor.rowcount} 行")
-            else:
-                # 3. 如果不存在，执行插入
-                cursor = await conn.execute(
+            # 如果没有更新任何行，说明记录不存在，执行插入
+            if cursor.rowcount == 0:
+                await conn.execute(
                     """
                     INSERT INTO user_settings (
-                        user_id, target_email, daily_send_time, timezone, 
+                        user_id, target_email, daily_send_time, timezone,
                         keywords_json, active, updated_at, user_search_intent, created_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
@@ -236,10 +230,12 @@ class SettingsService:
                         1 if payload.active else 0,
                         now,
                         user_search_intent,
-                        now,  # created_at 使用相同的时间戳
+                        now,  # created_at 使用相同时间
                     ),
                 )
-                logger.info(f"成功为 user_id {user_id} 创建设置记录")
+                logger.info(f"成功插入新配置: user_id={user_id}")
+            else:
+                logger.info(f"成功更新 {cursor.rowcount} 行: user_id={user_id}")
         return await self.get_user_settings(user_id)
 
     async def list_active_schedules(self) -> list[dict[str, Any]]:
@@ -435,6 +431,7 @@ class SettingsService:
         return out
 
     async def get_user_digest_state(self, user_id: int) -> dict[str, Any]:
+        """获取用户推送的历史文章"""
         async with get_conn() as conn:
             cursor = await conn.execute(
                 "SELECT state_json FROM user_digest_state WHERE user_id=?",

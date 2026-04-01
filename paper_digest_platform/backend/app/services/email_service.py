@@ -11,7 +11,10 @@ from app.core.config import get_settings
 
 
 class EmailService:
-    async def send_verification_code(self, to_email: str, code: str, purpose: str) -> None:
+    async def send_verification_code(
+        self, to_email: str, code: str, purpose: str
+    ) -> None:
+        """发送验证码邮件"""
         settings = get_settings()
         smtp_cfg = {
             "smtp_host": settings.verify_smtp_host,
@@ -40,7 +43,13 @@ class EmailService:
             "<p>有效期 10 分钟。如果这不是你的操作，请忽略本邮件。</p>"
             "</body></html>"
         )
-        await self.send_email(smtp_cfg=smtp_cfg, to_emails=[to_email], subject=subject, text_body=text_body, html_body=html_body)
+        await self.send_email(
+            smtp_cfg=smtp_cfg,
+            to_emails=[to_email],
+            subject=subject,
+            text_body=text_body,
+            html_body=html_body,
+        )
 
     async def send_test_email(
         self,
@@ -49,6 +58,7 @@ class EmailService:
         to_email: str,
         username: str,
     ) -> None:
+        """发送测试邮件，用于测试 SMTP 配置是否可用。"""
         subject = "论文推送平台 SMTP 测试成功"
         text_body = (
             "这是一封测试邮件。\n"
@@ -62,7 +72,13 @@ class EmailService:
             "<p>如果你收到这封邮件，说明 SMTP 配置可用。</p>"
             "</body></html>"
         )
-        await self.send_email(smtp_cfg=smtp_cfg, to_emails=[to_email], subject=subject, text_body=text_body, html_body=html_body)
+        await self.send_email(
+            smtp_cfg=smtp_cfg,
+            to_emails=[to_email],
+            subject=subject,
+            text_body=text_body,
+            html_body=html_body,
+        )
 
     async def send_email(
         self,
@@ -73,6 +89,7 @@ class EmailService:
         text_body: str,
         html_body: str,
     ) -> None:
+        """发送异步邮件"""
         await asyncio.to_thread(
             _send_email_sync,
             smtp_cfg,
@@ -123,4 +140,3 @@ def _send_email_sync(
         if username:
             server.login(username, password)
         server.sendmail(from_addr, recipients, msg.as_string())
-

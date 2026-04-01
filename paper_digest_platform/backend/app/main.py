@@ -34,10 +34,18 @@ async def lifespan(app: FastAPI):
 
     settings_service = SettingsService()
     email_service = EmailService()
-    auth_service = AuthService(email_service=email_service, settings_service=settings_service)
-    dispatch_service = DigestDispatchService(settings_service=settings_service, email_service=email_service)
-    user_scheduler = UserScheduler(dispatch_service=dispatch_service, settings_service=settings_service)
-
+    auth_service = AuthService(
+        email_service=email_service, settings_service=settings_service
+    )
+    # 初始化摘要分发服务，负责处理推送论文【TODO: 重点学习】
+    dispatch_service = DigestDispatchService(
+        settings_service=settings_service, email_service=email_service
+    )
+    # 初始化用户调度器，负责定时发送摘要邮件等【TODO: 重点学习】
+    user_scheduler = UserScheduler(
+        dispatch_service=dispatch_service, settings_service=settings_service
+    )
+    # 将服务对象挂载到 app.state 上。这样在整个应用的路由函数、中间件、其他生命周期函数中都可以通过 request.app.state 访问这些服务，避免使用全局变量，提高可测试性
     app.state.settings = settings
     app.state.settings_service = settings_service
     app.state.email_service = email_service
@@ -45,11 +53,13 @@ async def lifespan(app: FastAPI):
     app.state.dispatch_service = dispatch_service
     app.state.user_scheduler = user_scheduler
 
+    # 启动用户调度器（可能负责定时发送摘要邮件等）
     await user_scheduler.start()
     logger.info("scheduler started")
     try:
-        yield
+        yield  # 应用启动 -> 进入 lifespan 函数 -> 执行启动代码（yield 之前）-> yield（应用正常运行）
     finally:
+        # 应用关闭（如 Ctrl+C 或进程终止）-> 执行清理代码（yield 之后）-> 应用退出
         await user_scheduler.stop()
         logger.info("scheduler stopped")
         logger.info("backend stopped")
@@ -70,7 +80,9 @@ app.include_router(api_router, prefix=settings.api_prefix)
 
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
-    start_ts = time.perf_counter()
+    start_ts = (
+        time.perf_counter()
+    )  # perf_counter() 提供高精度的时间计数器（包括睡眠时间），用于精确计算请求处理耗时，相比 time.time()，更适合性能测量
     try:
         response = await call_next(request)
     except Exception:
@@ -93,6 +105,7 @@ async def request_logging_middleware(request: Request, call_next):
     )
     return response
 
+
 frontend_dir = Path(__file__).resolve().parents[2] / "frontend"
 frontend_dist_dir = frontend_dir / "dist"
 frontend_assets_dir = frontend_dist_dir / "assets"
@@ -111,6 +124,8 @@ async def index():
     if index_file.exists():
         return FileResponse(index_file)
     return JSONResponse(
-        {"message": "frontend build not found, run `npm run build` in paper_digest_platform/frontend"},
+        {
+            "message": "frontend build not found, run `npm run build` in paper_digest_platform/frontend"
+        },
         status_code=404,
     )

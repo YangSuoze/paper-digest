@@ -21,9 +21,9 @@ class Settings(BaseSettings):
     runtime_dir: str = "paper_digest_platform/runtime"
     base_digest_config_path: str = "paper_digest_config.json"
 
-    session_ttl_hours: int = 72
-    verify_code_ttl_minutes: int = 10
-    verify_code_cooldown_seconds: int = 60
+    session_ttl_hours: int = 72  # 登陆会话过期时间，单位小时，默认72小时
+    verify_code_ttl_minutes: int = 10  # 验证码过期时间，单位分钟，默认10分钟
+    verify_code_cooldown_seconds: int = 60  # 验证码冷却时间，单位秒，默认60秒
 
     verify_smtp_host: str = ""
     verify_smtp_port: int = 587

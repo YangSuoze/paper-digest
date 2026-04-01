@@ -54,17 +54,30 @@ def generate_session_token() -> str:
 
 
 def hash_session_token(token: str) -> str:
-    key = get_settings().app_secret_key.encode("utf-8")
     return hmac.new(
-        key=key, msg=token.encode("utf-8"), digestmod=hashlib.sha256
+        key=get_settings().app_secret_key.encode("utf-8"),
+        msg=token.encode("utf-8"),
+        digestmod=hashlib.sha256,
     ).hexdigest()
 
 
 def generate_verify_code() -> str:
+    """安全生成6位数字验证码的函数，使用Python的secrets模块生成密码学安全的随机数。"""
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
 def hash_verify_code(email: str, purpose: str, code: str) -> str:
+    """
+    使用 HMAC-SHA256 算法
+    app_secret_key 作为密钥，msg 作为消息
+    输出十六进制字符串（64 个字符）
+    验证码只有 6 位数字，容易被彩虹表破解
+    攻击者可以预计算所有 000000-999999 的哈希值
+    使用 HMAC + 密钥：
+        - 即使攻击者获得数据库，也无法逆向验证码
+        - 密钥是服务器端的，不在数据库中
+        - 无法通过彩虹表预计算
+    """
     settings = get_settings()
     msg = f"{email.lower()}::{purpose.lower()}::{code}".encode("utf-8")
     return hmac.new(

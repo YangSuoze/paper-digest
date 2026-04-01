@@ -27,7 +27,7 @@ class UserScheduler:
         self._settings_service = settings_service
         self._scheduler = AsyncIOScheduler(
             job_defaults={"coalesce": True, "max_instances": 1}
-        )
+        )  # 用于管理定时任务 "coalesce"是否 合并执行，max_instances最大并发实例数，任务每 5 分钟执行一次，但执行时间需要 10 分钟。max_instances=1：下一个任务会等待前一个完成（排队）
         self._started = False
 
     async def start(self) -> None:
@@ -35,7 +35,7 @@ class UserScheduler:
             return
         self._scheduler.start()
         self._started = True
-        logger.info("user scheduler started pid=%s", os.getpid())
+        logger.info("user scheduler started pid=%s", os.getpid())  # 当前进程的进程ID
         await self.refresh_all()
 
     async def stop(self) -> None:
@@ -46,6 +46,7 @@ class UserScheduler:
         logger.info("user scheduler shutdown")
 
     async def refresh_all(self) -> None:
+        """先删除所有用户的旧的任务, 再根据数据库中的配置重新创建所有用户的定时任务"""
         removed = 0
         for job in self._scheduler.get_jobs():
             if job.id.startswith("user-digest-"):
@@ -68,6 +69,7 @@ class UserScheduler:
         logger.info("scheduler refreshed, removed=%s scheduled=%s", removed, scheduled)
 
     async def refresh_user(self, user_id: int) -> None:
+        """刷新指定用户的定时任务，获取用户配置信息，根据配置创建新的定时任务"""
         self.remove_user(user_id)
         profile = await self._settings_service.get_user_dispatch_profile(user_id)
         if not bool(profile.get("active", 1)):
@@ -85,6 +87,7 @@ class UserScheduler:
         logger.info("user schedule refreshed, user_id=%s", user_id)
 
     def remove_user(self, user_id: int) -> None:
+        """删除指定用户的定时任务"""
         job_id = self._job_id(user_id)
         if self._scheduler.get_job(job_id):
             self._scheduler.remove_job(job_id)
@@ -97,12 +100,12 @@ class UserScheduler:
         timezone = self._safe_timezone(timezone_name)
         trigger = CronTrigger(hour=hour, minute=minute, timezone=timezone)
         self._scheduler.add_job(
-            self._dispatch_job,
-            trigger=trigger,
-            args=[user_id],
-            id=self._job_id(user_id),
-            replace_existing=True,
-            misfire_grace_time=1800,
+            self._dispatch_job,  # 要执行的函数
+            trigger=trigger,  # 触发器（何时执行）
+            args=[user_id],  # 函数参数
+            id=self._job_id(user_id),  # 任务唯一标识
+            replace_existing=True,  # 是否替换已存在的任务
+            misfire_grace_time=1800,  # 任务执行超时时间，单位秒，默认1800秒
         )
         logger.info(
             "scheduled user job, user_id=%s time=%02d:%02d timezone=%s",
@@ -116,7 +119,9 @@ class UserScheduler:
         await self._run_dispatch(user_id)
 
     async def _run_dispatch(self, user_id: int) -> None:
-        logger.info("scheduled dispatch started, user_id=%s pid=%s", user_id, os.getpid())
+        logger.info(
+            "scheduled dispatch started, user_id=%s pid=%s", user_id, os.getpid()
+        )
         try:
             await self._dispatch_service.trigger_user_digest(
                 user_id, run_type="scheduled", force_send=False
@@ -134,6 +139,7 @@ class UserScheduler:
             return ZoneInfo(self._settings.default_timezone)
 
     def _parse_time(self, value: str) -> tuple[int, int]:
+        """用于将 "HH:MM" 格式的时间字符串转换为整数元组 (hour, minute)"""
         parts = value.split(":")
         if len(parts) != 2:
             return (9, 30)

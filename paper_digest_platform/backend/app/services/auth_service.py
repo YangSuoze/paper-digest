@@ -30,7 +30,9 @@ class UserIdentity:
 
 
 class AuthService:
-    def __init__(self, *, email_service: EmailService, settings_service: SettingsService) -> None:
+    def __init__(
+        self, *, email_service: EmailService, settings_service: SettingsService
+    ) -> None:
         self._settings = get_settings()
         self._email_service = email_service
         self._settings_service = settings_service
@@ -40,7 +42,9 @@ class AuthService:
         await self._assert_email_not_used(normalized_email)
         await self._issue_code(email=normalized_email, purpose="register")
 
-    async def confirm_register(self, *, email: str, username: str, password: str, code: str) -> None:
+    async def confirm_register(
+        self, *, email: str, username: str, password: str, code: str
+    ) -> None:
         normalized_email = email.strip().lower()
         normalized_username = username.strip().lower()
         await self._assert_email_not_used(normalized_email)
@@ -54,7 +58,13 @@ class AuthService:
                 INSERT INTO users (username, email, password_hash, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?)
                 """,
-                (normalized_username, normalized_email, hash_password(password), now, now),
+                (
+                    normalized_username,
+                    normalized_email,
+                    hash_password(password),
+                    now,
+                    now,
+                ),
             )
             user_id = int(cursor.lastrowid)
         await self._settings_service.create_default_settings(user_id, normalized_email)
@@ -124,15 +134,20 @@ class AuthService:
                 ),
             )
 
-        profile = UserProfile(id=int(row["id"]), username=str(row["username"]), email=str(row["email"]))
+        profile = UserProfile(
+            id=int(row["id"]), username=str(row["username"]), email=str(row["email"])
+        )
         return LoginResponse(token=token, expires_at=expires_at, user=profile)
 
     async def logout(self, token: str) -> None:
         token_hash = hash_session_token(token)
         async with get_conn() as conn:
-            await conn.execute("DELETE FROM user_sessions WHERE token_hash=?", (token_hash,))
+            await conn.execute(
+                "DELETE FROM user_sessions WHERE token_hash=?", (token_hash,)
+            )
 
     async def get_user_by_token(self, token: str) -> UserIdentity:
+        """根据会话令牌获取用户身份信息。验证token是否过期并删除过期的会话记录。"""
         token_hash = hash_session_token(token)
         now = utc_now()
         async with get_conn() as conn:
@@ -150,11 +165,18 @@ class AuthService:
                 raise ValueError("登录状态无效")
             expires = parse_iso(str(row["expires_at"]))
             if expires <= now:
-                await conn.execute("DELETE FROM user_sessions WHERE token_hash=?", (token_hash,))
+                await conn.execute(
+                    "DELETE FROM user_sessions WHERE token_hash=?", (token_hash,)
+                )
                 raise ValueError("登录状态已过期")
-            return UserIdentity(id=int(row["id"]), username=str(row["username"]), email=str(row["email"]))
+            return UserIdentity(
+                id=int(row["id"]),
+                username=str(row["username"]),
+                email=str(row["email"]),
+            )
 
     async def _issue_code(self, *, email: str, purpose: str) -> None:
+        """发送验证码邮件"""
         now = utc_now()
         cooldown_seconds = max(1, int(self._settings.verify_code_cooldown_seconds))
         code_id = 0
@@ -175,6 +197,7 @@ class AuthService:
             )
             last = await cursor.fetchone()
             if last is not None:
+                # 检查是否有最近的验证码记录，如果有且时间间隔小于冷却时间，则抛出异常。
                 last_at = parse_iso(str(last["created_at"]))
                 elapsed = (now - last_at).total_seconds()
                 if elapsed < cooldown_seconds:
@@ -188,7 +211,7 @@ class AuthService:
                 """,
                 (email, purpose, code_hash, expires_at, created_at),
             )
-            code_id = int(cursor.lastrowid)
+            code_id = int(cursor.lastrowid)  # code_id 是新插入记录的数据库自增主键ID。
 
         try:
             await self._email_service.send_verification_code(email, code, purpose)
@@ -223,7 +246,9 @@ class AuthService:
             if expected_hash != current_hash:
                 raise ValueError("验证码错误")
 
-            await conn.execute("UPDATE email_codes SET consumed=1 WHERE id=?", (int(row["id"]),))
+            await conn.execute(
+                "UPDATE email_codes SET consumed=1 WHERE id=?", (int(row["id"]),)
+            )
 
     async def _assert_email_not_used(self, email: str) -> None:
         if await self._has_email(email):
@@ -231,7 +256,9 @@ class AuthService:
 
     async def _assert_username_not_used(self, username: str) -> None:
         async with get_conn() as conn:
-            cursor = await conn.execute("SELECT id FROM users WHERE username=?", (username,))
+            cursor = await conn.execute(
+                "SELECT id FROM users WHERE username=?", (username,)
+            )
             row = await cursor.fetchone()
         if row is not None:
             raise ValueError("用户名已存在")

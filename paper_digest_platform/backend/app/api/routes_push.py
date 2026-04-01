@@ -50,10 +50,7 @@ async def run_digest_now(
             user.id,
             payload.keywords_list,
         )
-        task = await dispatch_service.submit_manual_digest_task(
-            user.id,
-            keywords_list=payload.keywords_list,
-        )
+        task = await dispatch_service.submit_manual_digest_task(user.id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)

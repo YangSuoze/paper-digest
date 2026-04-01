@@ -44,13 +44,18 @@ async def get_my_settings(
 @router.put("/me", response_model=DigestSettingsResponse)
 async def update_my_settings(
     payload: DigestSettingsUpdateRequest,
-    user: UserIdentity = Depends(get_current_user),
-    settings_service: SettingsService = Depends(get_settings_service),
-    scheduler=Depends(get_scheduler),
+    user: UserIdentity = Depends(
+        get_current_user
+    ),  # 通过依赖注入获取当前登录用户，确保只有认证用户才能访问
+    settings_service: SettingsService = Depends(
+        get_settings_service
+    ),  # 注入配置服务实例
+    scheduler=Depends(get_scheduler),  # 用于在用户设置更新后刷新定时任务
 ) -> DigestSettingsResponse:
 
     logger.info("update user settings start user_id=%s payload=%s", user.id, payload)
     try:
+        # 更新用户论文推送配置，并返回最新的用户配置
         result = await settings_service.update_user_settings(user.id, payload)
     except ValueError as exc:
         raise HTTPException(
