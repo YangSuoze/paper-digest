@@ -272,7 +272,7 @@ def run_once(
             all_papers.extend(results)
             _report_progress("search_arxiv", f"arXiv 完成，命中 {len(results)} 篇")
         except Exception as e:
-            print(f"[WARN] arXiv搜索失败：{keywords_list} -> {e}")
+            _log(f"[WARN] arXiv搜索失败：{keywords_list} -> {e}")
             _report_progress("search_arxiv", "arXiv 搜索失败，继续后续数据源")
 
     if bool(crossref_cfg.get("enabled", True)):
@@ -292,7 +292,7 @@ def run_once(
             all_papers.extend(results)
             _report_progress("search_crossref", f"Crossref 完成，命中 {len(results)} 篇")
         except Exception as e:
-            print(f"[WARN] Crossref搜索失败：{keywords_list} -> {e}")
+            _log(f"[WARN] Crossref搜索失败：{keywords_list} -> {e}")
             _report_progress("search_crossref", "Crossref 搜索失败，继续后续数据源")
 
     if bool(pubmed_cfg.get("enabled", True)):
@@ -318,7 +318,7 @@ def run_once(
             all_papers.extend(results)
             _report_progress("search_pubmed", f"PubMed 完成，命中 {len(results)} 篇")
         except Exception as e:
-            print(f"[WARN] PubMed搜索失败：{keywords_list} -> {e}")
+            _log(f"[WARN] PubMed搜索失败：{keywords_list} -> {e}")
             _report_progress("search_pubmed", "PubMed 搜索失败，继续后续流程")
 
     # if bool(ieee_cfg.get("enabled", True)):
@@ -415,7 +415,10 @@ def run_once(
     try:
         available_papers, _ = llm_preference_rerank(available_papers, profile)
     except Exception as e:
-        print(f"[WARN] LLM偏好筛选失败 -> {e}")
+        _log(f"[WARN] LLM偏好筛选失败 -> {e}")
+
+    if max_total > 0 and len(available_papers) > max_total:
+        available_papers = available_papers[:max_total]
 
     new_papers = available_papers
 
@@ -446,7 +449,7 @@ def run_once(
                     semantic_scholar_enrich(p, api_key=api_key, timeout_s=timeout_s)
                 )
             except Exception as e:
-                print(f"[WARN] Semantic Scholar补全失败：{p.title[:60]} -> {e}")
+                _log(f"[WARN] Semantic Scholar补全失败：{p.title[:60]} -> {e}")
                 enriched.append(p)
         else:
             enriched.append(p)
@@ -461,7 +464,7 @@ def run_once(
     if summarize_limit > 0:
         if LLMClient is None:
 
-            print(f"[WARN] 未能导入 llm_tools.LLMClient，已跳过中文总结。")
+            _log("[WARN] 未能导入 llm_tools.LLMClient，已跳过中文总结。")
             _report_progress("llm_summary", "未加载 LLMClient，跳过中文总结")
         else:
             _report_progress(
@@ -484,7 +487,7 @@ def run_once(
                         p, llm_cfg, user_search_intent=profile
                     )
                 except Exception as e:
-                    print(f"[WARN] LLM总结失败：{p.title[:60]} -> {e}")
+                    _log(f"[WARN] LLM总结失败：{p.title[:60]} -> {e}")
                 time.sleep(0.5)
     else:
         _report_progress("llm_summary", "跳过大模型总结")

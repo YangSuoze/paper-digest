@@ -56,7 +56,7 @@ def _parse_keyword_line(line: str) -> list[str]:
     text = str(line or "").strip()
     if not text:
         return []
-    parts = re.split(r"\s*(?:&&|＆＆|,|，|;|；)\s*", text)
+    parts = re.split(r"\s*(?:&&|&|＆＆|＆|,|，|;|；)\s*", text)
     return _normalize_keyword_group(parts)
 
 

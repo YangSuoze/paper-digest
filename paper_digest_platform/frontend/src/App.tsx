@@ -22,7 +22,7 @@ type AuthTab = "login" | "register" | "reset";
 type DashboardTab = "keywords" | "records" | "feedback";
 type KeywordGroup = string[];
 
-const KEYWORD_GROUP_AND_SPLITTER = /\s*(?:&&|＆＆|,|，|;|；)\s*/;
+const KEYWORD_GROUP_AND_SPLITTER = /\s*(?:&&|&|＆＆|＆|,|，|;|；)\s*/;
 
 interface LoginFormState {
   username: string;

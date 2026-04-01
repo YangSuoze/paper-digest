@@ -1935,7 +1935,14 @@ def _log(msg: str) -> None:
     异常：
         - 按实现可能抛出运行时异常；调用方应根据业务场景处理。
     """
-    print(msg, flush=True)
+    try:
+        print(msg, flush=True)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+        safe = str(msg).encode(encoding, errors="replace").decode(
+            encoding, errors="replace"
+        )
+        print(safe, flush=True)
 
 
 def _http_get_with_retry(

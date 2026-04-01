@@ -81,6 +81,9 @@ class DigestDispatchService:
         history_before = await asyncio.to_thread(
             self._history_key_set_from_state, state_snapshot
         )
+        history_row_count_before = await asyncio.to_thread(
+            self._history_row_count_from_state, state_snapshot
+        )
         try:
             async with self._semaphore:
                 await asyncio.to_thread(
@@ -109,14 +112,21 @@ class DigestDispatchService:
             state_snapshot,
             history_before,
         )
+        history_row_count_after = await asyncio.to_thread(
+            self._history_row_count_from_state, state_snapshot
+        )
+        pushed_count = max(0, history_row_count_after - history_row_count_before)
         inserted_count = await self._settings_service.add_paper_records(
             user_id, run_type, new_records
         )
-        message = f"推送成功；新增论文 {len(new_records)} 篇，入库 {inserted_count} 条"
+        message = (
+            f"推送成功；本次推送 {pushed_count} 篇，新增论文 {len(new_records)} 篇，入库 {inserted_count} 条"
+        )
         logger.info(
-            "digest trigger success user_id=%s run_type=%s new_records=%s inserted=%s",
+            "digest trigger success user_id=%s run_type=%s pushed=%s new_records=%s inserted=%s",
             user_id,
             run_type,
+            pushed_count,
             len(new_records),
             inserted_count,
         )
@@ -338,7 +348,7 @@ class DigestDispatchService:
         text = str(line or "").strip()
         if not text:
             return []
-        parts = re.split(r"\s*(?:&&|＆＆|,|，|;|；)\s*", text)
+        parts = re.split(r"\s*(?:&&|&|＆＆|＆|,|，|;|；)\s*", text)
         return self._normalize_keyword_group(parts)
 
     def _normalize_keywords_list(self, raw: Any) -> list[list[str]]:
@@ -643,6 +653,9 @@ class DigestDispatchService:
             if str(row.get("uid") or "").strip()
             and str(row.get("push_date") or "").strip()
         }
+
+    def _history_row_count_from_state(self, state: dict[str, Any]) -> int:
+        return len(self._load_state_history_rows(state))
 
     def _collect_new_history_records_from_state(
         self,

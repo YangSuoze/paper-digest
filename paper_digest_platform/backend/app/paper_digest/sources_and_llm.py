@@ -64,16 +64,20 @@ def search_arxiv(
             "sortOrder": "descending",
         }
 
-        print(params)
-        r = None
-        for attempt in range(3):
-            r = requests.get(url, params=params, headers=headers, timeout=timeout_s)
-            if r.status_code != 429:
-                break
-            time.sleep(1.2 * (attempt + 1))
-        if r is None or r.status_code != 200:
+        _log(f"[DEBUG] arXiv query params: {params}")
+        try:
+            r = _http_get_with_retry(
+                url,
+                params=params,
+                headers=headers,
+                timeout_s=timeout_s,
+                max_retries=3,
+                backoff_s=1.2,
+                retry_statuses=(429, 500, 502, 503, 504),
+            )
+        except Exception as e:
+            _log(f"[WARN] arXiv 请求失败 ({query}): {e}")
             continue
-        r.raise_for_status()
         root = ET.fromstring(r.text)
 
         for entry in root.findall("atom:entry", ns):
@@ -81,7 +85,6 @@ def search_arxiv(
                 entry.findtext("atom:title", default="", namespaces=ns) or ""
             ).strip()
             title = re.sub(r"\s+", " ", title)
-            print(title)
             abstract = (
                 entry.findtext("atom:summary", default="", namespaces=ns) or ""
             ).strip()
@@ -228,7 +231,7 @@ def search_crossref(
             "order": "desc",
             "query": query_str,  # 对全文、摘要、标题进行联合查询
         }
-        print(f"->[Crossref 检索组] {query_str}")
+        _log(f"[DEBUG] Crossref query group: {query_str}")
         r = None
         for attempt in range(3):
             try:
@@ -242,7 +245,6 @@ def search_crossref(
             continue
 
         data = r.json()
-        print(data["message"]["items"][0].keys())
         items = ((data or {}).get("message") or {}).get("items") or []
         for item in items:
             # 过滤出版商
@@ -500,7 +502,7 @@ def search_pubmed(
             search_params["api_key"] = api_key
         if email:
             search_params["email"] = email
-        print(f"->[PubMed 检索组] {query_str}")
+        _log(f"[DEBUG] PubMed query group: {query_str}")
         try:
             r = _http_get_with_retry(
                 f"{base}/esearch.fcgi",
@@ -517,7 +519,7 @@ def search_pubmed(
                     seen_pmids.add(pmid_str)
                     all_pmids.append(pmid_str)
         except Exception as e:
-            print(f"[WARN] PubMed esearch 失败 ({query_str}): {e}")
+            _log(f"[WARN] PubMed esearch 失败 ({query_str}): {e}")
             continue
         time.sleep(2)  # PubMed 接口要求停顿，无 key 最多 3次/秒
     if not all_pmids:
@@ -546,7 +548,7 @@ def search_pubmed(
         )
         summary_json = (s.json() or {}).get("result") or {}
     except Exception as e:
-        print(f"[WARN] PubMed esummary 失败: {e}")
+        _log(f"[WARN] PubMed esummary 失败: {e}")
         summary_json = {}
     time.sleep(0.34)
 
@@ -855,7 +857,11 @@ def llm_preference_rerank(
     """
     if not papers:
         return papers, {"enabled": True, "applied": False, "reason": "no_candidates"}
-    profile = "用户的需求"
+    if LLMClient is None:
+        return papers, {"enabled": True, "applied": False, "reason": "llm_unavailable"}
+    profile = str(profile or "").strip()
+    if not profile:
+        return papers, {"enabled": True, "applied": False, "reason": "empty_profile"}
     prompt_items = "\n\n".join(
         _paper_preference_payload(idx, p) for idx, p in enumerate(papers)
     )
@@ -885,13 +891,21 @@ def llm_preference_rerank(
 {prompt_items}
 """
 
-    resp = LLMClient().query(
-        query=prompt,
-        model_name="qwen3-max",
-        system_message=system_message,
-        json_mode=True,
-    )
-    obj = json.loads(resp)
+    try:
+        resp = LLMClient().query(
+            query=prompt,
+            model_name="qwen3-max",
+            system_message=system_message,
+            json_mode=True,
+        )
+        obj = json.loads(resp)
+    except Exception as exc:
+        return papers, {
+            "enabled": True,
+            "applied": False,
+            "reason": "llm_query_failed",
+            "error": str(exc)[:200],
+        }
     raw_results = obj.get("results")
     if not isinstance(raw_results, list):
         return papers, {"enabled": True, "applied": False, "reason": "invalid_json"}
@@ -924,6 +938,16 @@ def llm_preference_rerank(
     kept.sort(key=lambda item: item[0], reverse=True)
 
     reranked = [paper for _, paper in kept]
+    if not reranked:
+        fallback_count = min(len(papers), 10)
+        return papers[:fallback_count], {
+            "enabled": True,
+            "applied": True,
+            "evaluated": len(papers),
+            "kept": 0,
+            "fallback": fallback_count,
+            "reason": "all_below_threshold",
+        }
     return reranked, {
         "enabled": True,
         "applied": True,
