@@ -19,3 +19,4 @@ paper_digest_platform/frontend/dist/
 
 paper_digest_platform/runtime/*.db
 paper_digest_platform/runtime/*.db-*
+paper_digest_platform/runtime/*.db
