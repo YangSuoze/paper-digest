@@ -103,13 +103,21 @@ class DigestDispatchService:
                     progress_callback=progress_callback,
                 )
         except Exception as exc:
+            failed_at = self._now_iso()
+            state_snapshot["last_search_failed_at"] = failed_at
+            state_snapshot["last_search_failure_message"] = str(exc)[:500]
+            await self._settings_service.save_user_digest_state(user_id, state_snapshot)
             message = f"推送失败：{exc}"
             self._emit_progress(progress_callback, "failed", message)
             logger.exception(
                 "digest trigger failed user_id=%s run_type=%s", user_id, run_type
             )
             await self._settings_service.add_dispatch_log(
-                user_id, run_type, "failed", message
+                user_id,
+                run_type,
+                "failed",
+                message,
+                diagnostics=self._diagnostics_from_state(state_snapshot),
             )
             raise RuntimeError(message) from exc
 
@@ -127,7 +135,14 @@ class DigestDispatchService:
         inserted_count = await self._settings_service.add_paper_records(
             user_id, run_type, new_records
         )
-        message = f"推送成功；本次推送 {pushed_count} 篇，新增论文 {len(new_records)} 篇，入库 {inserted_count} 条"
+        diagnostics = self._diagnostics_from_state(state_snapshot)
+        diagnostics_summary = self._format_diagnostics_summary(diagnostics)
+        message = (
+            f"推送成功；本次推送 {pushed_count} 篇，新增论文 {len(new_records)} 篇，"
+            f"入库 {inserted_count} 条"
+        )
+        if diagnostics_summary:
+            message = f"{message}；{diagnostics_summary}"
         logger.info(
             "digest trigger success user_id=%s run_type=%s pushed=%s new_records=%s inserted=%s",
             user_id,
@@ -137,10 +152,46 @@ class DigestDispatchService:
             inserted_count,
         )
         await self._settings_service.add_dispatch_log(
-            user_id, run_type, "success", message
+            user_id,
+            run_type,
+            "success",
+            message,
+            diagnostics=diagnostics,
         )
         self._emit_progress(progress_callback, "completed", message)
         return message
+
+    def _diagnostics_from_state(self, state: dict[str, Any]) -> dict[str, Any]:
+        value = (state or {}).get("last_search_diagnostics") or {}
+        return value if isinstance(value, dict) else {}
+
+    def _format_diagnostics_summary(self, diagnostics: dict[str, Any]) -> str:
+        if not diagnostics:
+            return ""
+        counts = diagnostics.get("counts") or {}
+        if not isinstance(counts, dict):
+            counts = {}
+        delivered = int(counts.get("delivered") or 0)
+        source_results = diagnostics.get("source_results") or []
+        source_bits: list[str] = []
+        if isinstance(source_results, list):
+            for item in source_results:
+                if not isinstance(item, dict):
+                    continue
+                source = str(item.get("source") or "").strip()
+                status = str(item.get("status") or "").strip()
+                count = int(item.get("candidate_count") or item.get("raw_count") or 0)
+                if source:
+                    source_bits.append(f"{source}={status}/{count}")
+        parts = [f"诊断 delivered={delivered}"]
+        if source_bits:
+            parts.append("sources " + ", ".join(source_bits))
+        zero = diagnostics.get("zero_result_explanation") or {}
+        if isinstance(zero, dict):
+            reason = str(zero.get("reason") or "").strip()
+            if reason:
+                parts.append(f"zero={reason}")
+        return "；".join(parts)
 
     async def submit_manual_digest_task(self, user_id: int) -> dict[str, Any]:
         profile = await self._settings_service.get_user_dispatch_profile(user_id)
@@ -169,6 +220,7 @@ class DigestDispatchService:
             "updated_at": now,
             "started_at": "",
             "finished_at": "",
+            "diagnostics": None,
         }
         with self._task_lock:
             self._manual_tasks[task_id] = task
@@ -248,12 +300,15 @@ class DigestDispatchService:
             )
             return
 
+        latest_state = await self._settings_service.get_user_digest_state(user_id)
+        diagnostics = self._diagnostics_from_state(latest_state)
         self._update_task(
             task_id,
             status="success",
             progress_stage="completed",
             progress_message="执行完成",
             result_message=message,
+            diagnostics=diagnostics or None,
             finished_at=self._now_iso(),
         )
         logger.info(

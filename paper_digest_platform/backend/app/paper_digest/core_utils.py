@@ -111,6 +111,10 @@ class Paper:
     arxiv_id: str
     pdf_url: str
     keywords: list[str]
+    pmid: str = ""
+    source_provenance: list[str] = dataclasses.field(default_factory=list)
+    relevance_score: float = 0.0
+    trust_signal: str = ""
 
 
 _SOURCE_DISPLAY_NAMES: dict[str, str] = {
@@ -119,6 +123,7 @@ _SOURCE_DISPLAY_NAMES: dict[str, str] = {
     "pubmed": "PubMed",
     "ieee": "IEEE Xplore",
     "semantic_scholar": "Semantic Scholar",
+    "openalex": "OpenAlex",
 }
 
 _WEEKDAY_LABELS: dict[int, str] = {
@@ -374,6 +379,7 @@ def _source_breakdown(papers: list[Paper]) -> str:
         "pubmed",
         "crossref",
         "arxiv",
+        "openalex",
         "ieee",
         "semantic_scholar",
         "unknown",
@@ -2255,12 +2261,19 @@ def _prune_push_history(
         record = {
             "uid": str(row.get("uid") or "").strip(),
             "push_date": push_date.isoformat(),
+            "run_type": str(row.get("run_type") or "").strip(),
             "title": str(row.get("title") or "").strip(),
             "url": str(row.get("url") or "").strip(),
             "venue": str(row.get("venue") or "").strip(),
             "publisher": str(row.get("publisher") or "").strip(),
             "source": str(row.get("source") or "").strip(),
+            "source_provenance": _unique_clean_list(
+                row.get("source_provenance") or [row.get("source")]
+            ),
             "published_date": published_date.isoformat() if published_date else "",
+            "doi": str(row.get("doi") or "").strip(),
+            "pmid": str(row.get("pmid") or "").strip(),
+            "arxiv_id": str(row.get("arxiv_id") or "").strip(),
             "keywords": _normalize_keywords(row.get("keywords")),
             "keyword_categories": _unique_clean_list(categories),
         }
@@ -2274,6 +2287,14 @@ def _prune_push_history(
 
 
 def _paper_uid(p: Paper) -> str:
+    try:
+        from app.paper_digest.fingerprints import paper_fingerprint
+
+        fp = paper_fingerprint(p)
+        if fp:
+            return fp
+    except Exception:
+        pass
     return p.url
 
 

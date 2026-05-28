@@ -1,0 +1,318 @@
+openapi: 3.1.0
+info:
+  title: Paper Digest Push Diagnostics Contract
+  version: 0.1.0
+  description: Contract additions for exposing paper search reliability diagnostics through existing push APIs.
+paths:
+  /api/v1/push/run-now:
+    post:
+      summary: Submit a manual digest run
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunNowRequest"
+      responses:
+        "200":
+          description: Manual task accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunNowSubmitResponse"
+  /api/v1/push/tasks/{task_id}:
+    get:
+      summary: Get manual digest task status and diagnostics
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunNowTaskStatus"
+        "404":
+          description: Task not found or not owned by current user
+  /api/v1/push/logs:
+    get:
+      summary: List dispatch logs with optional run diagnostics summary
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Dispatch log list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DispatchLogItem"
+  /api/v1/push/papers:
+    get:
+      summary: List delivered paper records
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Delivered paper list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaperRecordItem"
+components:
+  schemas:
+    RunNowRequest:
+      type: object
+      properties:
+        keywords_list:
+          type: array
+          nullable: true
+          items:
+            type: array
+            items:
+              type: string
+    RunNowSubmitResponse:
+      type: object
+      required:
+        - message
+        - task
+      properties:
+        message:
+          type: string
+        task:
+          $ref: "#/components/schemas/RunNowTaskStatus"
+    RunNowTaskStatus:
+      type: object
+      required:
+        - task_id
+        - run_type
+        - status
+        - progress_stage
+        - progress_message
+        - created_at
+        - updated_at
+      properties:
+        task_id:
+          type: string
+        run_type:
+          type: string
+          enum:
+            - manual_digest
+        status:
+          type: string
+          enum:
+            - queued
+            - running
+            - success
+            - failed
+            - partial
+        progress_stage:
+          type: string
+        progress_message:
+          type: string
+        result_message:
+          type: string
+          default: ""
+        error_message:
+          type: string
+          default: ""
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        started_at:
+          type: string
+          default: ""
+        finished_at:
+          type: string
+          default: ""
+        diagnostics:
+          $ref: "#/components/schemas/SearchRunDiagnostics"
+    DispatchLogItem:
+      type: object
+      required:
+        - id
+        - run_type
+        - status
+        - message
+        - created_at
+      properties:
+        id:
+          type: integer
+        run_type:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+        created_at:
+          type: string
+        diagnostics:
+          $ref: "#/components/schemas/SearchRunDiagnostics"
+    PaperRecordItem:
+      type: object
+      required:
+        - id
+        - uid
+        - push_date
+        - title
+        - url
+        - venue
+        - publisher
+        - source
+        - published_date
+        - keywords
+        - run_type
+        - created_at
+      properties:
+        id:
+          type: integer
+        uid:
+          type: string
+        push_date:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        venue:
+          type: string
+        publisher:
+          type: string
+        source:
+          type: string
+        source_provenance:
+          type: array
+          items:
+            type: string
+        published_date:
+          type: string
+        keywords:
+          type: array
+          items:
+            type: string
+        run_type:
+          type: string
+        created_at:
+          type: string
+    SearchRunDiagnostics:
+      type: object
+      properties:
+        run_id:
+          type: string
+        run_type:
+          type: string
+          enum:
+            - scheduled
+            - manual_digest
+        window_start:
+          type: string
+        window_end:
+          type: string
+        recovery_reason:
+          type: string
+          enum:
+            - normal
+            - missed_run
+            - previous_failure
+            - manual_extended
+        counts:
+          $ref: "#/components/schemas/SearchRunCounts"
+        source_results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceResult"
+        zero_result_explanation:
+          $ref: "#/components/schemas/ZeroResultExplanation"
+    SearchRunCounts:
+      type: object
+      properties:
+        raw_fetched:
+          type: integer
+          minimum: 0
+        after_keyword_filter:
+          type: integer
+          minimum: 0
+        after_run_dedup:
+          type: integer
+          minimum: 0
+        after_history_dedup:
+          type: integer
+          minimum: 0
+        after_relevance_filter:
+          type: integer
+          minimum: 0
+        delivered:
+          type: integer
+          minimum: 0
+    SourceResult:
+      type: object
+      required:
+        - source
+        - status
+        - raw_count
+        - candidate_count
+      properties:
+        source:
+          type: string
+        status:
+          type: string
+          enum:
+            - success
+            - empty
+            - failed
+            - timeout
+            - disabled
+        query_count:
+          type: integer
+          minimum: 0
+        raw_count:
+          type: integer
+          minimum: 0
+        candidate_count:
+          type: integer
+          minimum: 0
+        error_message:
+          type: string
+        elapsed_ms:
+          type: integer
+          minimum: 0
+    ZeroResultExplanation:
+      type: object
+      required:
+        - reason
+        - message
+      properties:
+        reason:
+          type: string
+          enum:
+            - no_source_hits
+            - all_sources_failed
+            - filtered_out
+            - duplicates_only
+            - no_relevant_after_ranking
+        message:
+          type: string
+        filter_summary:
+          type: string

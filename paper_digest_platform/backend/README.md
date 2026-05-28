@@ -71,6 +71,7 @@ cd ../backend
 5. 启动服务（在 `paper_digest_platform/backend` 下执行）
 
 ```bash
+lsof -i:8000 | grep LISTEN | awk '{print $2}' | xargs kill -9
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 nohup uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
 nohup gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --timeout 300 --bind 0.0.0.0:8000 > backend.log 2>&1 &
@@ -105,6 +106,14 @@ Vite 默认地址：`http://127.0.0.1:5173/`
 
 补充：`POST /api/v1/push/run-now` 支持在请求体中传入 `keywords`，本次手动执行会优先使用该关键词列表。
 
+## 论文检索可靠性
+
+论文推送现在使用来源隔离的检索流水线，按用户关键词同时查询 arXiv、Crossref、PubMed、OpenAlex 和 Semantic Scholar。单个来源失败、超时或返回空结果不会阻断其他来源；每次运行都会记录原始候选数、关键词过滤后数量、本轮去重后数量、历史去重后数量、相关性过滤后数量和最终投递数量。
+
+定时任务不再只依赖固定回溯天数。系统会根据 `user_digest_state` 中的上次成功检索窗口和失败标记计算有上限的补偿窗口，用于覆盖漏跑或失败后的时间段，同时继续用 DOI、PMID、arXiv ID 和归一化标题指纹抑制重复论文。
+
+诊断信息会写入 `dispatch_logs.diagnostics_json`，最近一次运行诊断会保存在 `user_digest_state.last_search_diagnostics`。前端的手动任务状态、执行日志和论文记录会展示来源状态、过滤计数、零结果解释和论文来源 provenance。
+
 ## 并发推送
 
 - 每个用户有独立定时任务（APScheduler）
@@ -130,3 +139,10 @@ SQLite 表：
 - `user_digest_state`（保存去重状态与推送历史）
 
 数据库路径默认：`paper_digest_platform/runtime/paper_digest_platform.db`
+
+新增字段通过启动时的兼容迁移补齐：
+
+- `dispatch_logs.diagnostics_json`：保存本次检索诊断
+- `paper_records.source_provenance_json`：保存论文命中的全部来源
+
+现有用户配置、论文记录和摘要状态不会被清空；设置保存只更新用户配置字段，论文入库使用 `INSERT OR IGNORE`，摘要状态保存会合并为同一用户的一条 JSON 状态记录。
