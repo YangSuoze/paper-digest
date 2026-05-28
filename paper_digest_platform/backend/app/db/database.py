@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS dispatch_logs (
   run_type TEXT NOT NULL,
   status TEXT NOT NULL,
   message TEXT NOT NULL DEFAULT '',
+  diagnostics_json TEXT NOT NULL DEFAULT '{}',
   created_at TEXT NOT NULL,
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -173,6 +174,7 @@ CREATE TABLE IF NOT EXISTS paper_records (
   venue TEXT NOT NULL DEFAULT '',
   publisher TEXT NOT NULL DEFAULT '',
   source TEXT NOT NULL DEFAULT '',
+  source_provenance_json TEXT NOT NULL DEFAULT '[]',
   published_date TEXT NOT NULL DEFAULT '',
   keywords_json TEXT NOT NULL DEFAULT '[]',
   run_type TEXT NOT NULL DEFAULT '',
@@ -218,7 +220,21 @@ async def init_db() -> None:
     async with aiosqlite.connect(db_file) as conn:
         # SCHEMA_SQL 这个模块定义了一个完整的数据库 Schema（表结构），并通过 init_db() 函数异步创建这些表和索引。
         await conn.executescript(SCHEMA_SQL)
+        await _ensure_optional_columns(conn)
         await conn.commit()
+
+
+async def _ensure_optional_columns(conn: aiosqlite.Connection) -> None:
+    optional_columns = (
+        ("dispatch_logs", "diagnostics_json", "TEXT NOT NULL DEFAULT '{}'"),
+        ("paper_records", "source_provenance_json", "TEXT NOT NULL DEFAULT '[]'"),
+    )
+    for table, column, definition in optional_columns:
+        cursor = await conn.execute(f"PRAGMA table_info({table})")
+        columns = {str(row[1]) for row in await cursor.fetchall()}
+        if column in columns:
+            continue
+        await conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 @asynccontextmanager

@@ -12,6 +12,8 @@ import type {
   LoginResponse,
   MessageResponse,
   PaperRecordItem,
+  SearchRunDiagnostics,
+  SourceResult,
   TriggerResponse,
   UserProfile,
 } from "./types";
@@ -145,6 +147,158 @@ function resolveKeywordsList(data: DigestSettingsResponse): KeywordGroup[] {
   return (data.keywords || [])
     .map((item) => parseKeywordLine(item || ""))
     .filter((group) => group.length > 0);
+}
+
+const SOURCE_STATUS_LABELS: Record<string, string> = {
+  success: "成功",
+  empty: "无结果",
+  failed: "失败",
+  timeout: "超时",
+  disabled: "停用",
+};
+
+const RECOVERY_REASON_LABELS: Record<string, string> = {
+  normal: "常规窗口",
+  missed_run: "补偿漏跑",
+  previous_failure: "补偿失败",
+  manual_extended: "手动扩展",
+};
+
+const ZERO_REASON_LABELS: Record<string, string> = {
+  no_source_hits: "来源无命中",
+  all_sources_failed: "来源全部失败",
+  filtered_out: "过滤后为空",
+  duplicates_only: "均为历史重复",
+  no_relevant_after_ranking: "相关性不足",
+};
+
+function safeCount(value: unknown): string {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return "0";
+  }
+  return String(Math.round(numeric));
+}
+
+function formatSourceStatus(status: string): string {
+  const key = String(status || "").trim();
+  return SOURCE_STATUS_LABELS[key] ?? (key || "未知");
+}
+
+function formatRecoveryReason(reason: string): string {
+  const key = String(reason || "").trim();
+  return RECOVERY_REASON_LABELS[key] ?? (key || "常规窗口");
+}
+
+function formatZeroReason(reason: string): string {
+  const key = String(reason || "").trim();
+  return ZERO_REASON_LABELS[key] ?? (key || "无新增论文");
+}
+
+function sourceChipClass(status: string): string {
+  const normalized = String(status || "unknown").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "unknown";
+  return `source-chip source-chip-${normalized}`;
+}
+
+function formatElapsed(ms: number): string {
+  const numeric = Number(ms || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "";
+  }
+  if (numeric >= 1000) {
+    return `${(numeric / 1000).toFixed(numeric >= 10000 ? 0 : 1)}s`;
+  }
+  return `${Math.round(numeric)}ms`;
+}
+
+function formatSourceCounts(item: SourceResult): string {
+  const parts = [
+    `原始 ${safeCount(item.raw_count)}`,
+    `候选 ${safeCount(item.candidate_count)}`,
+  ];
+  if (Number(item.query_count || 0) > 0) {
+    parts.push(`查询 ${safeCount(item.query_count)}`);
+  }
+  const elapsed = formatElapsed(item.elapsed_ms);
+  if (elapsed) {
+    parts.push(elapsed);
+  }
+  return parts.join(" · ");
+}
+
+function uniqueSourceList(values: string[] | undefined, fallback: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of [...(values || []), fallback]) {
+    const clean = String(value || "").trim();
+    if (!clean) {
+      continue;
+    }
+    const key = clean.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(clean);
+  }
+  return out;
+}
+
+function renderDiagnostics(diagnostics: SearchRunDiagnostics | null | undefined) {
+  if (!diagnostics) {
+    return null;
+  }
+
+  const counts = diagnostics.counts || {
+    raw_fetched: 0,
+    after_keyword_filter: 0,
+    after_run_dedup: 0,
+    after_history_dedup: 0,
+    after_relevance_filter: 0,
+    delivered: 0,
+  };
+  const sourceResults = diagnostics.source_results || [];
+  const zeroResult = diagnostics.zero_result_explanation;
+
+  return (
+    <div className="diagnostics-panel">
+      <div className="diagnostics-meta">
+        <span>{diagnostics.window_start || "未知开始"} - {diagnostics.window_end || "未知结束"}</span>
+        <span>{formatRecoveryReason(diagnostics.recovery_reason)}</span>
+        {diagnostics.run_type ? <span>{diagnostics.run_type}</span> : null}
+      </div>
+
+      <div className="diagnostics-counts">
+        <span>原始 {safeCount(counts.raw_fetched)}</span>
+        <span>关键词后 {safeCount(counts.after_keyword_filter)}</span>
+        <span>本轮去重后 {safeCount(counts.after_run_dedup)}</span>
+        <span>历史去重后 {safeCount(counts.after_history_dedup)}</span>
+        <span>相关性后 {safeCount(counts.after_relevance_filter)}</span>
+        <span>投递 {safeCount(counts.delivered)}</span>
+      </div>
+
+      {sourceResults.length ? (
+        <div className="source-result-list">
+          {sourceResults.map((item) => (
+            <div key={`${diagnostics.run_id}-${item.source}`} className="source-result-row">
+              <span className={sourceChipClass(item.status)}>{formatSourceStatus(item.status)}</span>
+              <span className="source-name">{item.source || "unknown"}</span>
+              <span className="source-counts">{formatSourceCounts(item)}</span>
+              {item.error_message ? <span className="source-error">{item.error_message}</span> : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {zeroResult ? (
+        <div className="zero-result">
+          <strong>{formatZeroReason(zeroResult.reason)}</strong>
+          <span>{zeroResult.message}</span>
+          {zeroResult.filter_summary ? <small>{zeroResult.filter_summary}</small> : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export default function App() {
@@ -914,6 +1068,8 @@ export default function App() {
                             ? "已完成"
                             : runNowTask.status === "failed"
                               ? "失败"
+                              : runNowTask.status === "partial"
+                                ? "部分完成"
                               : runNowTask.status}
                     </strong>
                     <span>
@@ -923,6 +1079,7 @@ export default function App() {
                           ? runNowTask.error_message || "执行失败"
                           : runNowTask.progress_message || "任务执行中"}
                     </span>
+                    {renderDiagnostics(runNowTask.diagnostics)}
                   </div>
                 ) : null}
               </article>
@@ -1089,6 +1246,7 @@ export default function App() {
                         <span>{item.status}</span>
                       </div>
                       <div>{item.message}</div>
+                      {renderDiagnostics(item.diagnostics)}
                     </li>
                   ))}
                 </ul>
@@ -1101,21 +1259,31 @@ export default function App() {
                 </div>
                 <ul className="log-list">
                   {papers.length === 0 ? <li className="log-item">暂无论文记录</li> : null}
-                  {papers.map((paper) => (
-                    <li key={paper.id} className="log-item">
-                      <div className="meta">
-                        <span>{paper.push_date}</span>
-                        <span>{paper.source || "unknown"}</span>
-                        <span>{paper.run_type}</span>
-                      </div>
-                      <div>{paper.title || paper.uid}</div>
-                      {paper.url ? (
-                        <a className="paper-link" href={paper.url} target="_blank" rel="noreferrer">
-                          {paper.url}
-                        </a>
-                      ) : null}
-                    </li>
-                  ))}
+                  {papers.map((paper) => {
+                    const provenance = uniqueSourceList(paper.source_provenance, paper.source);
+                    return (
+                      <li key={paper.id} className="log-item">
+                        <div className="meta">
+                          <span>{paper.push_date}</span>
+                          <span>{paper.source || "unknown"}</span>
+                          <span>{paper.run_type}</span>
+                        </div>
+                        <div>{paper.title || paper.uid}</div>
+                        {provenance.length ? (
+                          <div className="provenance-row">
+                            {provenance.map((source) => (
+                              <span key={`${paper.id}-${source}`}>{source}</span>
+                            ))}
+                          </div>
+                        ) : null}
+                        {paper.url ? (
+                          <a className="paper-link" href={paper.url} target="_blank" rel="noreferrer">
+                            {paper.url}
+                          </a>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               </article>
 

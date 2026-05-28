@@ -7,6 +7,10 @@ import datetime as dt
 from collections.abc import Callable
 from typing import Any, List, Optional
 from app.paper_digest.rendering import *
+from app.paper_digest.diagnostics import explain_zero_result
+from app.paper_digest.fingerprints import history_row_fingerprint
+from app.paper_digest.retrieval import build_default_source_calls, run_source_searches
+from app.paper_digest.windowing import compute_search_window
 from app.paper_digest.core_utils import (
     prune_state,
     _load_json,
@@ -31,6 +35,16 @@ from app.paper_digest.core_utils import (
 from llm_tools import LLMClient
 
 logger = logging.getLogger(__name__)
+
+
+def _history_row_uid(row: dict[str, Any]) -> str:
+    try:
+        fp = history_row_fingerprint(row)
+        if fp:
+            return fp
+    except Exception:
+        pass
+    return str(row.get("uid") or "").strip()
 
 
 def run_once(
@@ -75,8 +89,6 @@ def run_once(
             f"Unsupported run_mode='{run_mode}' (expected daily or weekly_summary)"
         )
 
-    since = run_date - dt.timedelta(days=days_back)  # 回溯 days_back 天
-    until = run_date  # 截止到当前日期
     timeout_s = 30
 
     # 2) 关键词
@@ -86,12 +98,8 @@ def run_once(
     max_total = 10
 
     # 3) 状态来源优先级：外部注入（数据库）> 本地 JSON
-    config_dir = "/Users/yangjie/Documents/python_project/paper-digest"
-    state_path = "paper_digest_state.json"
-    if not os.path.isabs(state_path):
-        state_path = os.path.join(config_dir, state_path)
     # 平台模式：调用方传入可变状态对象（通常来自数据库）
-    state = state_override
+    state = state_override if isinstance(state_override, dict) else {}
     # prune_state(state, keep_days)
     history_keep_days = 180
     state["push_history"] = _prune_push_history(
@@ -190,167 +198,113 @@ def run_once(
             )
             _report_progress("skip", "今日已发送过定时邮件，跳过执行")
             return
-    crossref_cfg = {"enabled": True, "mailto": ""}
-    arxiv_cfg = {"enabled": True}
     pubmed_cfg = {
         "enabled": True,
         "rows": 30,
         "email": "",
         "api_key_env": "NCBI_API_KEY",
     }
-    all_papers: list[Paper] = []
+    pm_email = (pubmed_cfg.get("email") or "").strip()
+    pm_api_key = (pubmed_cfg.get("api_key") or "").strip()
+    if not pm_api_key:
+        pm_key_env = (pubmed_cfg.get("api_key_env") or "").strip()
+        if pm_key_env:
+            pm_api_key = _env_get(pm_key_env)
+    semantic_scholar_api_key = _env_get("SEMANTIC_SCHOLAR_API_KEY")
+    openalex_mailto = _env_get("OPENALEX_MAILTO")
+
+    search_window = compute_search_window(
+        run_date=run_date,
+        days_back=days_back,
+        state=state,
+        dispatch_run_type=dispatch_run_type,
+    )
+    since = search_window.since
+    until = search_window.until
 
     _log(
-        f"[INFO] Run date: {run_date.isoformat()} | Window: {since.isoformat()} ~ {until.isoformat()} | Keywords list: {keywords_list}"
+        f"[INFO] Run date: {run_date.isoformat()} | Window: {since.isoformat()} ~ {until.isoformat()} "
+        f"| recovery={search_window.recovery_reason} | Keywords list: {keywords_list}"
     )
     _report_progress(
         "search_window",
-        f"开始检索近 {days_back} 天论文（关键词组 {len(keywords_list or [])}）",
+        f"开始检索 {since.isoformat()} 至 {until.isoformat()} 论文（关键词组 {len(keywords_list or [])}）",
     )
 
-    if bool(arxiv_cfg.get("enabled", True)):
-        _report_progress("search_arxiv", "arXiv 搜索中")
-        _log("[INFO] Source enabled: arXiv")
-        try:
-            results = search_arxiv(
-                keywords_list=keywords_list,
-                since=since,
-            )
-            _log(f"[INFO] arXiv '{keywords_list}' -> {len(results)}")
-            all_papers.extend(results)
-            _report_progress("search_arxiv", f"arXiv 完成，命中 {len(results)} 篇")
-        except Exception as e:
-            _log(f"[WARN] arXiv搜索失败：{keywords_list} -> {e}")
-            _report_progress("search_arxiv", "arXiv 搜索失败，继续后续数据源")
+    _report_progress("search_sources", "多来源论文检索中")
+    source_calls = build_default_source_calls(
+        keywords_list=keywords_list,
+        since=since,
+        until=until,
+        timeout_s=timeout_s,
+        pubmed_api_key=pm_api_key,
+        pubmed_email=pm_email,
+        semantic_scholar_api_key=semantic_scholar_api_key,
+        openalex_mailto=openalex_mailto,
+    )
+    retrieval_result = run_source_searches(
+        source_calls=source_calls,
+        run_type=dispatch_run_type,
+        since=since,
+        until=until,
+        recovery_reason=search_window.recovery_reason,
+        query_count=len(keywords_list or []),
+    )
+    diagnostics = retrieval_result.diagnostics
+    papers = retrieval_result.papers
+    for item in diagnostics.source_results:
+        _log(
+            f"[INFO] Source {item.source} status={item.status} raw={item.raw_count} "
+            f"candidates={item.candidate_count}"
+        )
+    _report_progress(
+        "search_sources",
+        f"多来源检索完成，候选 {diagnostics.counts.raw_fetched} 篇，去重后 {len(papers)} 篇",
+    )
 
-    if bool(crossref_cfg.get("enabled", True)):
-        _report_progress("search_crossref", "Crossref 搜索中")
-        _log("[INFO] Source enabled: Crossref")
-        try:
-            results = search_crossref(
-                keywords_list=keywords_list,
-                rows=20,
-                since=since,
-                mailto="",
-                publisher_substrings=[],
-                types=[],
-                timeout_s=timeout_s,
-            )
-            _log(f"[INFO] Crossref '{keywords_list}' -> {len(results)}")
-            all_papers.extend(results)
-            _report_progress(
-                "search_crossref", f"Crossref 完成，命中 {len(results)} 篇"
-            )
-        except Exception as e:
-            _log(f"[WARN] Crossref搜索失败：{keywords_list} -> {e}")
-            _report_progress("search_crossref", "Crossref 搜索失败，继续后续数据源")
-
-    if bool(pubmed_cfg.get("enabled", True)):
-        _report_progress("search_pubmed", "PubMed 搜索中")
-        _log("[INFO] Source enabled: PubMed")
-        pm_email = (pubmed_cfg.get("email") or "").strip()
-        pm_api_key = (pubmed_cfg.get("api_key") or "").strip()
-        if not pm_api_key:
-            pm_key_env = (pubmed_cfg.get("api_key_env") or "").strip()
-            if pm_key_env:
-                pm_api_key = _env_get(pm_key_env)
-        try:
-            results = search_pubmed(
-                keywords_list=keywords_list,
-                rows=20,
-                since=since,
-                timeout_s=timeout_s,
-                api_key=pm_api_key,
-                email=pm_email,
-            )
-            _log(f"[INFO] PubMed '{keywords_list}' -> {len(results)}")
-            all_papers.extend(results)
-            _report_progress("search_pubmed", f"PubMed 完成，命中 {len(results)} 篇")
-        except Exception as e:
-            _log(f"[WARN] PubMed搜索失败：{keywords_list} -> {e}")
-            _report_progress("search_pubmed", "PubMed 搜索失败，继续后续流程")
-
-    # if bool(ieee_cfg.get("enabled", True)):
-    #     ieee_api_key = (ieee_cfg.get("api_key") or "").strip()
-    #     if not ieee_api_key:
-    #         ieee_key_env = (ieee_cfg.get("api_key_env") or "").strip()
-    #         if ieee_key_env:
-    #             ieee_api_key = _env_get(ieee_key_env)
-    #     if not ieee_api_key:
-    #         _log(
-    #             "[WARN] IEEE Xplore enabled but no API key found; skipping IEEE source."
-    #         )
-    #     else:
-    #         _log("[INFO] Source enabled: IEEE Xplore")
-    #         rows = int(ieee_cfg.get("rows") or max_per_keyword)
-    #         for kw in keywords:
-    #             try:
-    #                 results = search_ieee_xplore(
-    #                     keyword=kw,
-    #                     rows=rows,
-    #                     since=since,
-    #                     until=until,
-    #                     timeout_s=timeout_s,
-    #                     api_key=ieee_api_key,
-    #                 )
-    #                 _log(f"[INFO] IEEE '{kw}' -> {len(results)}")
-    #                 all_papers.extend(results)
-    #             except Exception as e:
-    #                 print(f"[WARN] IEEE搜索失败：{kw} -> {e}")
-    #                 continue
-    #             time.sleep(0.34)
-
-    # 6) 全源聚合去重：同一论文按 UID 合并，并汇总关键词
+    # 6) 全源聚合去重已在 retrieval 管线中完成
     _report_progress("merge", "聚合去重中")
-    merged: dict[str, Paper] = {}
-    for p in all_papers:
-        uid = _paper_uid(p)
-        if uid in merged:
-            existing = merged[uid]
-            merged[uid] = dataclasses.replace(
-                existing, keywords=sorted(set(existing.keywords) | set(p.keywords))
-            )
-        else:
-            merged[uid] = p
-    papers = list(merged.values())
     _log(
         f"[INFO] Unique by source (after dedupe): {_source_breakdown(papers)} len={len(papers)}"
     )
     # 7) 基于历史状态去重：仅“定时调度”参与去重，手动执行不计入去重历史
     seen: dict[str, str] = {}
     if dispatch_run_type == "scheduled":
-        scheduled_seen_raw = state.get(
-            "seen_scheduled", {}
-        )  # 从状态中获取已推送文章记录
+        scheduled_seen_raw = state.get("seen_scheduled", {})
+        if not isinstance(scheduled_seen_raw, dict):
+            scheduled_seen_raw = {}
 
         if not scheduled_seen_raw:
             history_rows = state.get("push_history", [])
             for row in history_rows:
+                if not isinstance(row, dict):
+                    continue
                 row_run_type = row.get("run_type")
                 if row_run_type != "scheduled":
                     continue
-                uid = row.get("uid")
+                uid = _history_row_uid(row)
                 pushed_on = str(row.get("push_date") or "").strip()
                 if not uid:
                     continue
                 scheduled_seen_raw[uid] = pushed_on
 
         for uid_raw, date_raw in scheduled_seen_raw.items():
-            uid = uid_raw
+            uid = str(uid_raw or "").strip()
             pushed_on = date_raw
             if not uid:
                 continue
-            seen[uid] = pushed_on
+            seen[uid] = str(pushed_on or "").strip()
 
         _log(f"[INFO] Dedupe enabled (run_type=scheduled), seen_scheduled={len(seen)}")
     else:
         _log(f"[INFO] manual run keeps full history search.")
     available_papers: list[Paper] = []
     for p in papers:
-        uid = p.url
+        uid = _paper_uid(p)
         if dispatch_run_type == "scheduled" and uid in seen:
             continue
         available_papers.append(p)
+    diagnostics.counts.after_history_dedup = len(available_papers)
     logger.info(f"llm筛选前论文数量={len(available_papers)}")
     _report_progress("llm_rerank", "大模型偏好筛选中")
     try:
@@ -360,8 +314,12 @@ def run_once(
 
     if max_total > 0 and len(available_papers) > max_total:
         available_papers = available_papers[:max_total]
+    diagnostics.counts.after_relevance_filter = len(available_papers)
 
     new_papers = available_papers
+    diagnostics.counts.delivered = len(new_papers)
+    if diagnostics.counts.delivered == 0:
+        diagnostics.zero_result_explanation = explain_zero_result(diagnostics)
 
     if dispatch_run_type == "scheduled":
         _log(
@@ -431,8 +389,22 @@ def run_once(
     else:
         _report_progress("llm_summary", "跳过大模型总结")
 
+    diagnostics_payload = diagnostics.to_dict()
+    state["last_search_diagnostics"] = diagnostics_payload
+    state["last_search_window"] = {
+        "since": since.isoformat(),
+        "until": until.isoformat(),
+        "recovery_reason": search_window.recovery_reason,
+        "run_type": dispatch_run_type,
+    }
+
     _report_progress("render_email", "整理邮件内容中")
-    subject, text_body, html_body = build_email(run_date, enriched, summaries)
+    subject, text_body, html_body = build_email(
+        run_date,
+        enriched,
+        summaries,
+        diagnostics=diagnostics,
+    )
 
     email_sent = False
 
@@ -459,7 +431,7 @@ def run_once(
         else:
             for p in enriched:
                 d = run_date.isoformat()
-                seen[p.url] = d
+                seen[_paper_uid(p)] = d
             state["seen_scheduled"] = seen
             state["seen"] = seen
 
@@ -470,8 +442,16 @@ def run_once(
         state["last_run"] = now_ts
         state["last_email_at"] = now_ts
         state["last_email_date"] = run_date.isoformat()
+        state["last_successful_search_date"] = run_date.isoformat()
+        state["last_successful_search_window"] = {
+            "since": since.isoformat(),
+            "until": until.isoformat(),
+            "recovery_reason": search_window.recovery_reason,
+        }
+        state.pop("last_search_failed_at", None)
         if dispatch_run_type == "scheduled":
             state["last_scheduled_email_date"] = run_date.isoformat()
+            state["last_successful_scheduled_search_date"] = run_date.isoformat()
         # 仅文件模式写回 JSON；数据库模式由外层服务持久化 state_override。
 
         _report_progress("completed", "推送执行完成")

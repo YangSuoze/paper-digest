@@ -37,6 +37,15 @@ def _clean_keywords(values: list[str]) -> list[str]:
     return out
 
 
+def _clean_source_provenance(value: Any, fallback_source: str = "") -> list[str]:
+    values = value if isinstance(value, list) else []
+    out = _clean_keywords([str(item) for item in values])
+    fallback = str(fallback_source or "").strip()
+    if fallback and fallback not in out:
+        out.append(fallback)
+    return out
+
+
 def _normalize_keyword_group(values: list[Any]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -305,15 +314,29 @@ class SettingsService:
         return await self.get_user_dispatch_profile(user_id)
 
     async def add_dispatch_log(
-        self, user_id: int, run_type: str, status: str, message: str
+        self,
+        user_id: int,
+        run_type: str,
+        status: str,
+        message: str,
+        diagnostics: dict[str, Any] | None = None,
     ) -> None:
+        diagnostics_payload = diagnostics if isinstance(diagnostics, dict) else {}
         async with get_conn() as conn:
             await conn.execute(
                 """
-                INSERT INTO dispatch_logs (user_id, run_type, status, message, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO dispatch_logs (
+                  user_id, run_type, status, message, diagnostics_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (user_id, run_type, status, message[:1000], _now_iso()),
+                (
+                    user_id,
+                    run_type,
+                    status,
+                    message[:1000],
+                    json.dumps(diagnostics_payload, ensure_ascii=False),
+                    _now_iso(),
+                ),
             )
 
     async def list_dispatch_logs(
@@ -323,7 +346,7 @@ class SettingsService:
         async with get_conn() as conn:
             cursor = await conn.execute(
                 """
-                SELECT id, run_type, status, message, created_at
+                SELECT id, run_type, status, message, diagnostics_json, created_at
                 FROM dispatch_logs
                 WHERE user_id=?
                 ORDER BY id DESC
@@ -332,7 +355,17 @@ class SettingsService:
                 (user_id, size),
             )
             rows = await cursor.fetchall()
-        return [dict(row) for row in rows]
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            try:
+                diagnostics = json.loads(item.get("diagnostics_json") or "{}")
+            except Exception:
+                diagnostics = {}
+            item["diagnostics"] = diagnostics if isinstance(diagnostics, dict) and diagnostics else None
+            item.pop("diagnostics_json", None)
+            out.append(item)
+        return out
 
     async def add_paper_records(
         self,
@@ -350,6 +383,11 @@ class SettingsService:
             keywords = _clean_keywords(
                 [str(item) for item in (row.get("keywords") or [])]
             )
+            source = str(row.get("source") or "").strip()
+            source_provenance = _clean_source_provenance(
+                row.get("source_provenance"),
+                fallback_source=source,
+            )
             payloads.append(
                 (
                     user_id,
@@ -359,7 +397,8 @@ class SettingsService:
                     str(row.get("url") or "").strip(),
                     str(row.get("venue") or "").strip(),
                     str(row.get("publisher") or "").strip(),
-                    str(row.get("source") or "").strip(),
+                    source,
+                    json.dumps(source_provenance, ensure_ascii=False),
                     str(row.get("published_date") or "").strip(),
                     json.dumps(keywords, ensure_ascii=False),
                     run_type,
@@ -376,8 +415,9 @@ class SettingsService:
                 """
                 INSERT OR IGNORE INTO paper_records (
                   user_id, uid, push_date, title, url, venue, publisher,
-                  source, published_date, keywords_json, run_type, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  source, source_provenance_json, published_date, keywords_json,
+                  run_type, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 payloads,
             )
@@ -400,6 +440,7 @@ class SettingsService:
                   venue,
                   publisher,
                   source,
+                  source_provenance_json,
                   published_date,
                   keywords_json,
                   run_type,
@@ -426,7 +467,18 @@ class SettingsService:
             except Exception:
                 keywords = []
             payload["keywords"] = keywords
+            try:
+                raw_provenance = json.loads(
+                    payload.get("source_provenance_json") or "[]"
+                )
+            except Exception:
+                raw_provenance = []
+            payload["source_provenance"] = _clean_source_provenance(
+                raw_provenance,
+                fallback_source=str(payload.get("source") or ""),
+            )
             payload.pop("keywords_json", None)
+            payload.pop("source_provenance_json", None)
             out.append(payload)
         return out
 
