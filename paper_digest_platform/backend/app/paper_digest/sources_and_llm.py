@@ -631,6 +631,277 @@ def search_pubmed(
     return papers[:rows]
 
 
+def _keyword_group_label(keyword_group: list[str]) -> str:
+    return " + ".join(str(item or "").strip() for item in keyword_group if item)
+
+
+def _keyword_query(keyword_group: list[str]) -> str:
+    return " ".join(str(item or "").strip() for item in keyword_group if item)
+
+
+def _openalex_reconstruct_abstract(inverted_index: Any) -> str:
+    if not isinstance(inverted_index, dict):
+        return ""
+    words: dict[int, str] = {}
+    for word, positions in inverted_index.items():
+        if not isinstance(positions, list):
+            continue
+        for pos in positions:
+            try:
+                words[int(pos)] = str(word)
+            except Exception:
+                continue
+    return " ".join(words[index] for index in sorted(words))
+
+
+def _openalex_authors(raw: Any) -> list[str]:
+    out: list[str] = []
+    if not isinstance(raw, list):
+        return out
+    for item in raw[:20]:
+        if not isinstance(item, dict):
+            continue
+        author = item.get("author") or {}
+        name = str(author.get("display_name") or "").strip()
+        if name:
+            out.append(name)
+    return out
+
+
+def search_openalex(
+    keywords_list: list[list[str]],
+    since: dt.date,
+    until: dt.date,
+    rows: int = 50,
+    timeout_s: int = 30,
+    mailto: str = "",
+) -> list[Paper]:
+    """Search OpenAlex works and map source metadata into Paper objects."""
+    url = "https://api.openalex.org/works"
+    headers = {"User-Agent": USER_AGENT}
+    merged: dict[str, Paper] = {}
+
+    for keyword_group in keywords_list:
+        query = _keyword_query(keyword_group)
+        if not query:
+            continue
+        params: dict[str, Any] = {
+            "search": query,
+            "filter": (
+                f"from_publication_date:{since.isoformat()},"
+                f"to_publication_date:{until.isoformat()}"
+            ),
+            "per_page": max(1, min(int(rows), 200)),
+            "select": (
+                "id,title,authorships,abstract_inverted_index,doi,"
+                "publication_date,primary_location,cited_by_count,open_access"
+            ),
+        }
+        if mailto:
+            params["mailto"] = mailto
+
+        _log(f"[DEBUG] OpenAlex query group: {query}")
+        r = _http_get_with_retry(
+            url,
+            params=params,
+            headers=headers,
+            timeout_s=timeout_s,
+            max_retries=3,
+            backoff_s=1.5,
+            retry_statuses=(429, 500, 502, 503, 504),
+        )
+        for item in (r.json() or {}).get("results") or []:
+            if not isinstance(item, dict):
+                continue
+            title = re.sub(r"\s+", " ", str(item.get("title") or "").strip())
+            if not title:
+                continue
+            published_date = _parse_date(str(item.get("publication_date") or ""))
+            if published_date and (published_date < since or published_date > until):
+                continue
+            doi = str(item.get("doi") or "").strip()
+            if doi.lower().startswith("https://doi.org/"):
+                doi = doi[len("https://doi.org/") :].strip()
+            primary_location = item.get("primary_location") or {}
+            source_info = primary_location.get("source") or {}
+            venue = str(source_info.get("display_name") or "OpenAlex").strip()
+            open_access = item.get("open_access") or {}
+            paper_url = (
+                str(open_access.get("oa_url") or "").strip()
+                or str(primary_location.get("landing_page_url") or "").strip()
+                or str(item.get("id") or "").strip()
+            )
+            trust_signal = "published" if doi else "openalex_indexed"
+            cited_by = item.get("cited_by_count")
+            if cited_by not in (None, ""):
+                trust_signal = f"{trust_signal}; citations={cited_by}"
+            paper = Paper(
+                source="openalex",
+                title=title,
+                url=paper_url,
+                venue=venue,
+                published_date=published_date,
+                authors=_openalex_authors(item.get("authorships")),
+                abstract=_openalex_reconstruct_abstract(
+                    item.get("abstract_inverted_index")
+                ),
+                publisher="OpenAlex",
+                doi=doi,
+                arxiv_id="",
+                pdf_url=str(open_access.get("oa_url") or "").strip(),
+                keywords=[_keyword_group_label(keyword_group)],
+                source_provenance=["openalex"],
+                trust_signal=trust_signal,
+            )
+            uid = _paper_uid(paper)
+            if uid in merged:
+                existing = merged[uid]
+                merged[uid] = dataclasses.replace(
+                    existing,
+                    keywords=sorted(set(existing.keywords) | set(paper.keywords)),
+                )
+            else:
+                merged[uid] = paper
+        time.sleep(0.2)
+
+    papers = list(merged.values())
+    papers.sort(
+        key=lambda p: (p.published_date or dt.date(1900, 1, 1), p.title),
+        reverse=True,
+    )
+    return papers[:rows]
+
+
+def _semantic_scholar_authors(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for item in raw[:20]:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if name:
+            out.append(name)
+    return out
+
+
+def search_semantic_scholar(
+    keywords_list: list[list[str]],
+    since: dt.date,
+    until: dt.date,
+    rows: int = 50,
+    timeout_s: int = 30,
+    api_key: str = "",
+) -> list[Paper]:
+    """Search Semantic Scholar Graph API and map metadata into Paper objects."""
+    url = "https://api.semanticscholar.org/graph/v1/paper/search"
+    fields = (
+        "title,authors,abstract,tldr,year,venue,externalIds,citationCount,"
+        "influentialCitationCount,publicationDate,url"
+    )
+    headers = {"User-Agent": USER_AGENT}
+    if api_key:
+        headers["x-api-key"] = api_key
+    merged: dict[str, Paper] = {}
+
+    for keyword_group in keywords_list:
+        query = _keyword_query(keyword_group)
+        if not query:
+            continue
+        params = {
+            "query": query,
+            "fields": fields,
+            "limit": max(1, min(int(rows), 100)),
+            "publicationDateOrYear": f"{since.isoformat()}:{until.isoformat()}",
+        }
+        _log(f"[DEBUG] Semantic Scholar query group: {query}")
+        try:
+            r = _http_get_with_retry(
+                url,
+                params=params,
+                headers=headers,
+                timeout_s=timeout_s,
+                max_retries=2,
+                backoff_s=2.0,
+                retry_statuses=(429, 500, 502, 503, 504),
+            )
+        except Exception:
+            if not api_key:
+                time.sleep(1.5)
+            raise
+
+        for item in (r.json() or {}).get("data") or []:
+            if not isinstance(item, dict):
+                continue
+            title = re.sub(r"\s+", " ", str(item.get("title") or "").strip())
+            if not title:
+                continue
+            published_date = _parse_date(
+                str(item.get("publicationDate") or item.get("year") or "")
+            )
+            if published_date and (published_date < since or published_date > until):
+                continue
+            external_ids = item.get("externalIds") or {}
+            doi = str(external_ids.get("DOI") or "").strip()
+            pmid = str(external_ids.get("PubMed") or "").strip()
+            arxiv_id = str(external_ids.get("ArXiv") or "").strip()
+            tldr = item.get("tldr") or {}
+            abstract = str(item.get("abstract") or "").strip()
+            tldr_text = str(tldr.get("text") or "").strip() if isinstance(tldr, dict) else ""
+            if not abstract and tldr_text:
+                abstract = tldr_text
+            paper_url = str(item.get("url") or "").strip()
+            if not paper_url:
+                if doi:
+                    paper_url = f"https://doi.org/{doi}"
+                elif pmid:
+                    paper_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+                elif arxiv_id:
+                    paper_url = f"https://arxiv.org/abs/{arxiv_id}"
+            trust_signal = "published" if doi or pmid else "semantic_scholar_indexed"
+            citations = item.get("citationCount")
+            influential = item.get("influentialCitationCount")
+            bits = [trust_signal]
+            if citations not in (None, ""):
+                bits.append(f"citations={citations}")
+            if influential not in (None, ""):
+                bits.append(f"influential={influential}")
+            paper = Paper(
+                source="semantic_scholar",
+                title=title,
+                url=paper_url,
+                venue=str(item.get("venue") or "Semantic Scholar").strip(),
+                published_date=published_date,
+                authors=_semantic_scholar_authors(item.get("authors")),
+                abstract=abstract,
+                publisher="Semantic Scholar",
+                doi=doi,
+                arxiv_id=arxiv_id,
+                pdf_url="",
+                keywords=[_keyword_group_label(keyword_group)],
+                pmid=pmid,
+                source_provenance=["semantic_scholar"],
+                trust_signal="; ".join(bits),
+            )
+            uid = _paper_uid(paper)
+            if uid in merged:
+                existing = merged[uid]
+                merged[uid] = dataclasses.replace(
+                    existing,
+                    keywords=sorted(set(existing.keywords) | set(paper.keywords)),
+                )
+            else:
+                merged[uid] = paper
+        time.sleep(0.1 if api_key else 1.5)
+
+    papers = list(merged.values())
+    papers.sort(
+        key=lambda p: (p.published_date or dt.date(1900, 1, 1), p.title),
+        reverse=True,
+    )
+    return papers[:rows]
+
+
 def _ieee_authors(raw: Any) -> list[str]:
     """
     功能说明：
@@ -1157,6 +1428,8 @@ __all__ = [
     "search_arxiv",
     "search_crossref",
     "search_pubmed",
+    "search_openalex",
+    "search_semantic_scholar",
     "search_ieee_xplore",
     "semantic_scholar_enrich",
     "llm_preference_rerank",

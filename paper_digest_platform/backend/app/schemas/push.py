@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field
 
 
 class TestEmailRequest(BaseModel):
@@ -16,6 +16,42 @@ class RunNowRequest(BaseModel):
     keywords_list: list[list[str]] | None = Field(default=None)
 
 
+class SearchRunCounts(BaseModel):
+    raw_fetched: int = 0
+    after_keyword_filter: int = 0
+    after_run_dedup: int = 0
+    after_history_dedup: int = 0
+    after_relevance_filter: int = 0
+    delivered: int = 0
+
+
+class SourceResult(BaseModel):
+    source: str
+    status: str
+    query_count: int = 0
+    raw_count: int = 0
+    candidate_count: int = 0
+    error_message: str = ""
+    elapsed_ms: int = 0
+
+
+class ZeroResultExplanation(BaseModel):
+    reason: str
+    message: str
+    filter_summary: str = ""
+
+
+class SearchRunDiagnostics(BaseModel):
+    run_id: str = ""
+    run_type: str = ""
+    window_start: str = ""
+    window_end: str = ""
+    recovery_reason: str = "normal"
+    counts: SearchRunCounts = Field(default_factory=SearchRunCounts)
+    source_results: list[SourceResult] = Field(default_factory=list)
+    zero_result_explanation: ZeroResultExplanation | None = None
+
+
 class RunNowTaskStatus(BaseModel):
     task_id: str
     run_type: str
@@ -28,6 +64,7 @@ class RunNowTaskStatus(BaseModel):
     updated_at: str
     started_at: str = ""
     finished_at: str = ""
+    diagnostics: SearchRunDiagnostics | None = None
 
 
 class RunNowSubmitResponse(BaseModel):
@@ -41,6 +78,7 @@ class DispatchLogItem(BaseModel):
     status: str
     message: str
     created_at: str
+    diagnostics: SearchRunDiagnostics | None = None
 
 
 class PaperRecordItem(BaseModel):
@@ -52,6 +90,7 @@ class PaperRecordItem(BaseModel):
     venue: str
     publisher: str
     source: str
+    source_provenance: list[str] = Field(default_factory=list)
     published_date: str
     keywords: list[str]
     run_type: str

@@ -3,14 +3,62 @@ from __future__ import annotations
 """邮件正文与周报渲染实现。"""
 import html
 import datetime as dt
+from typing import Any
 from app.paper_digest.core_utils import *
 from app.paper_digest.sources_and_llm import *
+
+
+def _diagnostics_payload(diagnostics: Any) -> dict[str, Any]:
+    if diagnostics is None:
+        return {}
+    if isinstance(diagnostics, dict):
+        return diagnostics
+    to_dict = getattr(diagnostics, "to_dict", None)
+    if callable(to_dict):
+        try:
+            payload = to_dict()
+            return payload if isinstance(payload, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
+def _diagnostics_source_summary(diagnostics: dict[str, Any]) -> str:
+    source_results = diagnostics.get("source_results") or []
+    if not isinstance(source_results, list) or not source_results:
+        return ""
+    parts: list[str] = []
+    for item in source_results:
+        if not isinstance(item, dict):
+            continue
+        source = _source_display_name(str(item.get("source") or ""))
+        status = str(item.get("status") or "").strip()
+        count = int(item.get("candidate_count") or item.get("raw_count") or 0)
+        if source:
+            parts.append(f"{source}: {status}/{count}")
+    return "；".join(parts)
+
+
+def _diagnostics_window_text(diagnostics: dict[str, Any]) -> str:
+    start = str(diagnostics.get("window_start") or "").strip()
+    end = str(diagnostics.get("window_end") or "").strip()
+    if not start and not end:
+        return ""
+    recovery = str(diagnostics.get("recovery_reason") or "").strip()
+    suffix = f"（{recovery}）" if recovery and recovery != "normal" else ""
+    return f"{start} 至 {end}{suffix}"
+
+
+def _zero_explanation_payload(diagnostics: dict[str, Any]) -> dict[str, Any]:
+    value = diagnostics.get("zero_result_explanation") or {}
+    return value if isinstance(value, dict) else {}
 
 
 def build_email(
     run_date: dt.date,
     papers: list[Paper],
     summaries: dict[str, dict[str, str]],
+    diagnostics: Any = None,
 ) -> tuple[str, str, str]:
     """
     功能说明：
@@ -24,9 +72,33 @@ def build_email(
     异常：
         - 按实现可能抛出运行时异常；调用方应根据业务场景处理。
     """
+    diagnostics_payload = _diagnostics_payload(diagnostics)
+    source_summary = _diagnostics_source_summary(diagnostics_payload)
+    window_text = _diagnostics_window_text(diagnostics_payload)
+    zero_explanation = _zero_explanation_payload(diagnostics_payload)
+    counts = diagnostics_payload.get("counts") or {}
+    if not isinstance(counts, dict):
+        counts = {}
+
     subject = f"每日论文推送 {run_date.isoformat()}（{len(papers)}篇）"
 
     text_lines: list[str] = [subject, ""]
+    if window_text:
+        text_lines.extend([f"检索窗口: {window_text}"])
+    if source_summary:
+        text_lines.extend([f"来源结果: {source_summary}"])
+    if counts:
+        text_lines.extend(
+            [
+                "筛选计数: "
+                f"原始 {counts.get('raw_fetched', 0)}，"
+                f"运行内去重 {counts.get('after_run_dedup', 0)}，"
+                f"历史去重后 {counts.get('after_history_dedup', 0)}，"
+                f"最终 {counts.get('delivered', len(papers))}"
+            ]
+        )
+    if window_text or source_summary or counts:
+        text_lines.append("")
     html_lines: list[str] = [
         "<html>",
         (
@@ -55,11 +127,69 @@ def build_email(
             + _html_badge(
                 run_date.isoformat(), bg="#dcfce7", fg="#166534", border="#86efac"
             )
+            + (
+                _html_badge(
+                    f"窗口 {window_text}",
+                    bg="#fef3c7",
+                    fg="#92400e",
+                    border="#fde68a",
+                )
+                if window_text
+                else ""
+            )
             + "</div>"
             "</td></tr>"
         ),
         '<tr><td style="padding:24px 24px 30px;background:#ffffff;">',
     ]
+
+    if source_summary or counts:
+        summary_bits: list[str] = []
+        if source_summary:
+            summary_bits.append(f"<b>来源结果：</b>{html.escape(source_summary)}")
+        if counts:
+            summary_bits.append(
+                "<b>筛选计数：</b>"
+                f"原始 {int(counts.get('raw_fetched') or 0)}，"
+                f"运行内去重 {int(counts.get('after_run_dedup') or 0)}，"
+                f"历史去重后 {int(counts.get('after_history_dedup') or 0)}，"
+                f"最终 {int(counts.get('delivered') or len(papers))}"
+            )
+        html_lines.append(
+            '<div style="margin:0 0 22px;padding:14px 16px;border-radius:14px;'
+            'background:#f8fafc;border:1px solid #e2e8f0;font-size:14px;'
+            'line-height:1.75;color:#334155;">'
+            + "<br>".join(summary_bits)
+            + "</div>"
+        )
+
+    if not papers:
+        reason = str(zero_explanation.get("reason") or "no_new_content").strip()
+        message = str(zero_explanation.get("message") or "本次检索完成，但没有可推送的新论文。").strip()
+        filter_summary = str(zero_explanation.get("filter_summary") or "").strip()
+        text_lines.extend(
+            [
+                "本次没有可推送的新论文。",
+                f"原因: {reason}",
+                f"说明: {message}",
+            ]
+        )
+        if filter_summary:
+            text_lines.append(f"过滤摘要: {filter_summary}")
+        text_lines.append("")
+        html_lines.append(
+            '<div style="padding:22px;border-radius:18px;background:#fff7ed;'
+            'border:1px solid #fed7aa;color:#7c2d12;">'
+            '<div style="font-size:18px;font-weight:900;line-height:1.4;">本次没有可推送的新论文</div>'
+            f'<div style="margin-top:10px;font-size:14px;line-height:1.8;"><b>原因：</b>{html.escape(reason)}</div>'
+            f'<div style="margin-top:6px;font-size:15px;line-height:1.8;">{html.escape(message)}</div>'
+            + (
+                f'<div style="margin-top:8px;font-size:13px;line-height:1.7;color:#92400e;">{html.escape(filter_summary)}</div>'
+                if filter_summary
+                else ""
+            )
+            + "</div>"
+        )
 
     for idx, p in enumerate(papers, start=1):
         uid = _paper_uid(p)
@@ -70,6 +200,12 @@ def build_email(
         pub = html.escape(p.published_date.isoformat() if p.published_date else "")
         publisher = html.escape(p.publisher or "")
         source_name = html.escape(_source_display_name(p.source))
+        provenance_names = [
+            _source_display_name(source)
+            for source in (p.source_provenance or [p.source])
+            if str(source or "").strip()
+        ]
+        provenance_text = html.escape(_safe_join(provenance_names))
         authors = html.escape(_safe_join(p.authors))
         intro = _paper_intro(p, s, max_len=420)
 
@@ -97,6 +233,8 @@ def build_email(
             meta_text_parts.append(f"<b>出版商：</b>{publisher}")
         if source_name:
             meta_text_parts.append(f"<b>检索来源：</b>{source_name}")
+        if provenance_text and provenance_text != source_name:
+            meta_text_parts.append(f"<b>来源汇总：</b>{provenance_text}")
         meta_text_parts.append(f"<b>发表日期：</b>{pub}")
         html_lines.append(
             '<div style="margin-top:8px;font-size:14px;line-height:1.7;color:#475569;">'
@@ -136,6 +274,8 @@ def build_email(
             text_meta_parts.append(f"出版商: {p.publisher}")
         if p.source:
             text_meta_parts.append(f"检索来源: {_source_display_name(p.source)}")
+        if provenance_names:
+            text_meta_parts.append(f"来源汇总: {_safe_join(provenance_names)}")
         text_meta_parts.append(f"日期: {text_pub}")
         text_lines.append("   " + " | ".join(text_meta_parts))
         if p.keywords:
@@ -200,8 +340,9 @@ def _paper_history_record(
     异常：
         - 按实现可能抛出运行时异常；调用方应根据业务场景处理。
     """
+    provenance = _unique_clean_list([*(p.source_provenance or []), p.source])
     return {
-        "uid": p.url.strip(),
+        "uid": _paper_uid(p),
         "push_date": push_date.isoformat(),
         "run_type": str(run_type or "").strip(),
         "title": p.title.strip(),
@@ -209,7 +350,11 @@ def _paper_history_record(
         "venue": (p.venue or "").strip(),
         "publisher": (p.publisher or "").strip(),
         "source": (p.source or "").strip(),
+        "source_provenance": provenance,
         "published_date": p.published_date.isoformat() if p.published_date else "",
+        "doi": (p.doi or "").strip(),
+        "pmid": (p.pmid or "").strip(),
+        "arxiv_id": (p.arxiv_id or "").strip(),
         "keywords": p.keywords,
         "keyword_categories": _keyword_categories(p.keywords),
     }

@@ -52,12 +52,49 @@ export interface FeedbackSubmitResponse {
   item: FeedbackItem;
 }
 
+export interface SearchRunCounts {
+  raw_fetched: number;
+  after_keyword_filter: number;
+  after_run_dedup: number;
+  after_history_dedup: number;
+  after_relevance_filter: number;
+  delivered: number;
+}
+
+export interface SourceResult {
+  source: string;
+  status: "success" | "empty" | "failed" | "timeout" | "disabled" | string;
+  query_count: number;
+  raw_count: number;
+  candidate_count: number;
+  error_message: string;
+  elapsed_ms: number;
+}
+
+export interface ZeroResultExplanation {
+  reason: string;
+  message: string;
+  filter_summary: string;
+}
+
+export interface SearchRunDiagnostics {
+  run_id: string;
+  run_type: string;
+  window_start: string;
+  window_end: string;
+  recovery_reason: string;
+  counts: SearchRunCounts;
+  source_results: SourceResult[];
+  zero_result_explanation?: ZeroResultExplanation | null;
+}
+
 export interface DispatchLogItem {
   id: number;
   run_type: string;
   status: string;
   message: string;
   created_at: string;
+  diagnostics?: SearchRunDiagnostics | null;
 }
 
 export interface TriggerResponse {
@@ -68,7 +105,7 @@ export interface TriggerResponse {
 export interface RunNowTaskStatus {
   task_id: string;
   run_type: string;
-  status: "queued" | "running" | "success" | "failed" | string;
+  status: "queued" | "running" | "success" | "failed" | "partial" | string;
   progress_stage: string;
   progress_message: string;
   result_message: string;
@@ -77,6 +114,7 @@ export interface RunNowTaskStatus {
   updated_at: string;
   started_at: string;
   finished_at: string;
+  diagnostics?: SearchRunDiagnostics | null;
 }
 
 export interface RunNowSubmitResponse {
@@ -93,6 +131,7 @@ export interface PaperRecordItem {
   venue: string;
   publisher: string;
   source: string;
+  source_provenance?: string[];
   published_date: string;
   keywords: string[];
   run_type: string;

@@ -5,8 +5,17 @@ __pycache__/
 *.pyd
 .pytest_cache/
 .venv/
+venv/
+dist/
+build/
+*.egg-info/
 
 *.log
 .env
+.env*
 
 node_modules/
+paper_digest_platform/frontend/dist/
+
+paper_digest_platform/runtime/*.db
+paper_digest_platform/runtime/*.db-*
